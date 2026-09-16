@@ -195,3 +195,90 @@ Update docs/02-design.md accordingly, then proceed with implementation as planne
 **Prompt (verbatim):** Approved. I added the env vars to .env.example myself. Commit only the code now (feat commit per CLAUDE.md): everything under apps/, package-lock.json and .env.example — not docs/ or prompts/. Message: "feat: M2 event-to-delivery vertical slice" with a 1–2 sentence body. Then stop. Paste git log --oneline -2 and git status --short.
 **Summary (EN):** Commit the M2 code only (apps/, package-lock.json, .env.example) as a feat: commit with the given subject and a short body, then show the log and status.
 **Outcome:** Staged apps/, package-lock.json and .env.example only, and committed 57e2c3c "feat: M2 event-to-delivery vertical slice" with a two-sentence body. No co-author trailer, per CLAUDE.md. docs/ and prompts/ stay uncommitted. Not pushed.
+
+## 2026-09-16T15:55:06.541Z — M2 retro review (fresh session)
+**Prompt (verbatim):** /review 1e3a854
+**Summary (EN):** Run the versioned pre-review command (D27) on the merged M2 range.
+**Outcome:** Reviewed `1e3a854...HEAD` (apps/api, 28 files) and reported 7 findings (2 major, 5 minor) with the verdict "fix first". No files edited. This entry was added afterwards by the user: the command forbids file edits, so the session did not write its own log entry.
+
+## 2026-09-16T15:56:40.521Z — M2 retro review (fresh session)
+**Prompt (verbatim):** Save your report above verbatim to docs/reviews/m2-pre-review.md (create the folder). Change nothing else.
+**Summary (EN):** Save the review report to docs/reviews/.
+**Outcome:** Wrote docs/reviews/m2-pre-review.md. Log entry added afterwards by the user, for the same reason as above.
+
+## 2026-09-16T16:02:47.343Z — M3 Slack channel
+**Prompt (verbatim):** Milestone M3: Slack channel + fixes from the M2 pre-review. Work on the current branch `feat/m3-slack-channel`. Leave the uncommitted files in docs/, prompts/ and .claude/commands/ untouched, except docs/02-design.md as stated below.
+
+The plan below is pre-approved: write your 3–6 line plan into the prompts/log.md entry (timestamp from prompts/raw.md) and proceed without waiting. Stop and wait only if a new dependency would be needed, a build or test fails and you cannot fix it within this scope, or something here contradicts docs/02-design.md.
+
+## Fixes (findings from docs/reviews/m2-pre-review.md, triaged by me)
+1. #1 `AlertPipelineService`: a failing delivery-row save must not stop the loop or fail the request. Catch it per delivery, log it with Nest's Logger (event id, user id, channel, error), continue; the response contains the rows that were saved.
+2. #3 `config.ts`: use `||` instead of `??` for every value, so an empty env var falls back to the default like docker-compose does.
+3. #6 `docs/02-design.md`: change the unknown-channel error text to match the code (`Unknown channel: <id>`).
+4. Unicode: in `tokenize`, apply `.normalize('NFC')` before lowercasing (keywords go through the same function).
+5. `lint` script in apps/api/package.json: remove the deleted `test/` folder.
+
+## Slack channel
+- `SlackChannel`, `id = 'slack'`, one more entry in the existing channels factory. Nothing else in the pipeline may change — if something must, stop and tell me why.
+- One incoming webhook from env `SLACK_WEBHOOK_URL`, read in config.ts like the others (workspace-level channel, assumption A7). The text names the recipient, because the webhook is not per-user.
+- Empty or unset URL → return `dry-run`, log the text with Logger.
+- Otherwise POST JSON `{ text }` with Node's built-in `fetch` and `AbortSignal.timeout(5000)`. 2xx → `sent`; non-2xx → throw an error containing the status code and response body.
+- Text: `*[<type> · severity <n>]* <title>`, then summary, tags, occurredAt, `For: <name> <email>`.
+- Constructor takes its config like `EmailChannel`, so it is testable without env.
+
+## Seed
+Bence's rule R3 gets `channels: ['email', 'slack']`. Reset the dev DB first with `docker compose down -v && docker compose up -d` (dev data only, approved).
+
+## Tests (vitest, no DB)
+- #2 `AlertPipelineService` with in-memory fake repositories and a real `ChannelRegistry`:
+  - one working and one throwing channel → both rows saved, statuses `dry-run` and `failed`, error message stored
+  - unknown channel id → `failed` row with `Unknown channel: <id>`
+  - missing user → `failed` row
+  - a row save that throws for one delivery → the other delivery is still sent and saved, the call resolves
+- #4 `planDeliveries`: an earlier rule of the same user/channel that does not match, a later one that does → the later rule's id; one rule with `['email','slack']` → two entries.
+- #5 `ChannelRegistry`: get registered, unknown → undefined, duplicate ids throw. `EmailChannel`: no host → `dry-run` and the logged text contains the subject in the specified format.
+- `SlackChannel` with stubbed global `fetch`: no URL → `dry-run`, fetch not called; 200 → `sent`, body contains title and recipient email; 500 → throws with the status code.
+- NFC: decomposed "a\u0301rvi\u0301z" in a title matches keyword "árvíz".
+
+## docs/02-design.md
+Besides fix 3: add Slack to the channel section; in "At larger scale" add per-user Slack delivery via a Slack app (`chat.postMessage` + user id). No other docs.
+
+## Report (real output)
+1. `npm run lint -w apps/api`, `npm run build -w apps/api`, `npm test -w apps/api` — output and exit codes
+2. With Postgres up and `npm run dev:api` running, no SLACK_WEBHOOK_URL set:
+   - market event curl (ASCII-safe, \u escapes) matching R3 ("interest rate") → response with two dry-run rows (email + slack)
+   - the Slack dry-run log line
+   - `curl localhost:3000/deliveries`
+3. Stop the dev server, wait for TIME_WAIT to clear, paste `netstat -ano | findstr :3000` (empty)
+4. `git status --short`
+
+Do not commit. Do not push.
+**Summary (EN):** Implement the Slack webhook channel and the triaged M2 pre-review fixes (resilient row saves, `||` config defaults, NFC tokenize, lint script, design doc error text), add the listed unit tests, update the seed and design doc, and report with real output.
+**Plan:** (1) Fixes: per-delivery try/catch around the row save with Logger, `||` in config.ts, NFC in tokenize, drop `test/` from lint, error text in docs/02-design.md. (2) Add `slackConfig()` and `SlackChannel` (fetch + 5s timeout, dry-run without URL), one factory entry. (3) Seed R3 with `['email','slack']`. (4) Vitest specs: pipeline with fake repos, planner, registry, email dry-run, Slack with stubbed fetch, NFC. (5) Design doc Slack section and larger-scale note. (6) Lint, build, test, reset DB, live run with curl, stop server, report.
+**Outcome:** Implemented the five fixes and SlackChannel (one factory entry; the pipeline change is only fix #1), seeded R3 with email and slack, added 14 tests (33 total), and updated docs/02-design.md with the error text, the Slack channel bullet and per-user Slack under larger scale. My first draft of the pipeline spec called mock methods through the channel object, which caused three oxlint unbound-method warnings; I rewrote it to keep the mocks in variables. I also dropped an unrequested design-doc edit to the configuration section. Lint, build and tests exit 0. After a DB reset, the live R3 event returned 201 with email and slack dry-run rows. Stopping the background task left node listening on :3000, so I killed PID 39408, and the port is now empty. Not committed.
+
+## 2026-09-16T16:17:22.767Z — M3 pre-review (fresh session)
+**Prompt (verbatim):** /review main
+**Summary (EN):** Run the versioned pre-review command (D27) on the M3 branch against main.
+**Outcome:** Reviewed main...HEAD (apps/api, 15 files) and reported 6 findings (1 major, 5 minor) with the verdict "fix first". The major one: NFC normalization was added to title and summary tokens but not to tag matching. No files edited except this entry.
+
+## 2026-09-16T16:18:56.068Z — M3 pre-review (fresh session)
+**Prompt (verbatim):** Save your report above verbatim to docs/reviews/m3-pre-review.md. Change nothing else except your prompts/log.md entry.
+**Summary (EN):** Save the M3 review report to docs/reviews/.
+**Outcome:** Wrote docs/reviews/m3-pre-review.md with the report verbatim. No other files changed.
+
+## 2026-09-16T16:21:46.105Z — M3 pre-review fixes
+**Prompt (verbatim):** Fix the findings in docs/reviews/m3-pre-review.md — all six are accepted. Work on feat/m3-slack-channel. Pre-approved; stop only if a build or test fails and you cannot fix it within this scope.
+
+1. match-rule.ts: NFC-normalize and lowercase tags and keywords before the tag comparison (reuse one helper with tokenize). Test: a decomposed tag "a\u0301rvi\u0301z" matches keyword "árvíz".
+2. slack.channel.ts: escape `&` → `&amp;`, `<` → `&lt;`, `>` → `&gt;` in every interpolated value (title, summary, tags, name, email) — not in the `*[...]*` markup you add yourself. Test: a title `<!channel> & <https://x|y>` appears escaped in the posted body.
+3. slack.channel.spec.ts: a stubbed fetch that rejects → `send` rejects; the fetch init has a `signal`.
+4. New config.spec.ts: with `vi.stubEnv` set to empty strings, `postgresConfig()`, `smtpConfig()` and `slackConfig()` return their defaults (empty `SLACK_WEBHOOK_URL` → undefined). Restore env after each test.
+5. alert-pipeline.service.spec.ts: the missing-user test asserts `error: 'Recipient user not found'`.
+6. docs/02-design.md, configuration section: add `SLACK_WEBHOOK_URL` (no default; empty means dry-run). No other doc edits.
+
+Then run lint, build and test for apps/api and paste output with exit codes. Commit only apps/ with:
+`fix: M3 pre-review findings` and body "Normalizes tags to NFC, escapes Slack control characters in event text, and adds tests for fetch failure, empty-env defaults and the missing-user error, as found by the M3 pre-review."
+Paste `git log --oneline -3` and `git status --short`. Do not push.
+**Summary (EN):** Fix all six M3 pre-review findings (NFC tags, Slack escaping, fetch-failure/config/missing-user tests, SLACK_WEBHOOK_URL in the design config section), run lint/build/test, and commit apps/ as a fix: commit.
+**Outcome:** Fixed all six findings. Tag comparison uses a shared NFC and lowercase helper. Slack escapes & < > in interpolated values. New tests cover a decomposed tag, escaping, a rejected fetch, the fetch signal, empty-env config defaults and the missing-user error text (39 tests). Added SLACK_WEBHOOK_URL to the design doc configuration section. My first escaping test spread the Event and caused an oxlint no-misused-spread warning; I replaced the spread with a small event factory. Lint, build and test exit 0. Committed apps/ only as 304ceb6 "fix: M3 pre-review findings" with no co-author trailer, per CLAUDE.md. Not pushed.
