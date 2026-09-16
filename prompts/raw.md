@@ -190,3 +190,11 @@ Update docs/02-design.md accordingly, then proceed with implementation as planne
 ## 2026-09-16T13:22:46.387Z
 
 Approved. I added the env vars to .env.example myself. Commit only the code now (feat commit per CLAUDE.md): everything under apps/, package-lock.json and .env.example — not docs/ or prompts/. Message: "feat: M2 event-to-delivery vertical slice" with a 1–2 sentence body. Then stop. Paste git log --oneline -2 and git status --short.
+
+## 2026-09-16T15:55:06.541Z
+
+/review 1e3a854
+
+## 2026-09-16T15:56:40.521Z
+
+Save your report above verbatim to docs/reviews/m2-pre-review.md (create the folder). Change nothing else.

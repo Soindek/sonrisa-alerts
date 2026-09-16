@@ -195,3 +195,13 @@ Update docs/02-design.md accordingly, then proceed with implementation as planne
 **Prompt (verbatim):** Approved. I added the env vars to .env.example myself. Commit only the code now (feat commit per CLAUDE.md): everything under apps/, package-lock.json and .env.example — not docs/ or prompts/. Message: "feat: M2 event-to-delivery vertical slice" with a 1–2 sentence body. Then stop. Paste git log --oneline -2 and git status --short.
 **Summary (EN):** Commit the M2 code only (apps/, package-lock.json, .env.example) as a feat: commit with the given subject and a short body, then show the log and status.
 **Outcome:** Staged apps/, package-lock.json and .env.example only, and committed 57e2c3c "feat: M2 event-to-delivery vertical slice" with a two-sentence body. No co-author trailer, per CLAUDE.md. docs/ and prompts/ stay uncommitted. Not pushed.
+
+## 2026-09-16T15:55:06.541Z — M2 retro review (fresh session)
+**Prompt (verbatim):** /review 1e3a854
+**Summary (EN):** Run the versioned pre-review command (D27) on the merged M2 range.
+**Outcome:** Reviewed `1e3a854...HEAD` (apps/api, 28 files) and reported 7 findings (2 major, 5 minor) with the verdict "fix first". No files edited. This entry was added afterwards by the user: the command forbids file edits, so the session did not write its own log entry.
+
+## 2026-09-16T15:56:40.521Z — M2 retro review (fresh session)
+**Prompt (verbatim):** Save your report above verbatim to docs/reviews/m2-pre-review.md (create the folder). Change nothing else.
+**Summary (EN):** Save the review report to docs/reviews/.
+**Outcome:** Wrote docs/reviews/m2-pre-review.md. Log entry added afterwards by the user, for the same reason as above.
