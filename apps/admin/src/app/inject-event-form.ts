@@ -13,6 +13,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { AlertsApi, EVENT_TYPES, type EventType } from './alerts-api';
+import { errorMessages } from './error-messages';
 
 export function wholeNumber(control: AbstractControl): ValidationErrors | null {
   const value: unknown = control.value;
@@ -86,15 +87,4 @@ export class InjectEventForm {
     this.errors.set([]);
     this.createdCount.set(null);
   }
-}
-
-function errorMessages(err: HttpErrorResponse): string[] {
-  const message: unknown = err.status === 400 ? (err.error as { message?: unknown } | null)?.message : undefined;
-  if (Array.isArray(message)) {
-    return message.map(String);
-  }
-  if (typeof message === 'string') {
-    return [message];
-  }
-  return [`Request failed (${err.status || 'network error'})`];
 }

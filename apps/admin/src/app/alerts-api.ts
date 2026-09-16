@@ -36,6 +36,25 @@ export interface DeliveryLogEntry extends Delivery {
   user: { name: string; email: string } | null;
 }
 
+export interface AlertRule {
+  id: string;
+  userId: string;
+  eventTypes: EventType[];
+  minSeverity: number;
+  keywords: string[];
+  channels: string[];
+  createdAt: string;
+}
+
+export interface UserWithRules {
+  id: string;
+  name: string;
+  email: string;
+  rules: AlertRule[];
+}
+
+export type CreateRuleDto = Pick<AlertRule, 'userId' | 'eventTypes' | 'minSeverity' | 'keywords' | 'channels'>;
+
 @Injectable({ providedIn: 'root' })
 export class AlertsApi {
   private readonly http = inject(HttpClient);
@@ -46,5 +65,21 @@ export class AlertsApi {
 
   listDeliveries(): Observable<DeliveryLogEntry[]> {
     return this.http.get<DeliveryLogEntry[]>('/api/deliveries');
+  }
+
+  listChannels(): Observable<string[]> {
+    return this.http.get<string[]>('/api/channels');
+  }
+
+  listUsers(): Observable<UserWithRules[]> {
+    return this.http.get<UserWithRules[]>('/api/users');
+  }
+
+  createRule(dto: CreateRuleDto): Observable<AlertRule> {
+    return this.http.post<AlertRule>('/api/rules', dto);
+  }
+
+  deleteRule(id: string): Observable<void> {
+    return this.http.delete<void>(`/api/rules/${encodeURIComponent(id)}`);
   }
 }
