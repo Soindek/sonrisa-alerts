@@ -104,6 +104,7 @@ Retry, dedup, rate limiting, end-user UI, auth, real providers — all excluded 
 ### D24 — Dependencies: typeorm 0.3.31, no `@types/nodemailer`, no config library
 **Alternatives:** typeorm 1.1.1 (`latest`); `@nestjs/config`.
 **Why:** Claude Code said it was unsure of the 1.x API. I pinned the maintained 0.3 line (0.3.31, July 2026) so its output could be checked against an API it knows; `@nestjs/typeorm` 12 supports both. Moving to 1.x is a separate step. `nodemailer` 10 ships its own types, so `@types/nodemailer` (8.x) would describe the wrong API. The root `.env` is loaded with Node's built-in `process.loadEnvFile()`, resolved from the compiled `dist/main.js`, not from the working directory.
+**Known consequence (found in a manual run after M3):** on startup `pg` 8.23 prints `DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0`. Traced with `NODE_OPTIONS=--trace-deprecation`: TypeORM 0.3's `RdbmsSchemaBuilder.build` → `PostgresQueryRunner.getTables` runs `getUserDefinedTypeName` queries in `Promise.all` on one connection. It only runs because `synchronize` is on (D23), so it is a dev-only startup path, not our code. Harmless today; it becomes an error with `pg@9`, so keep `pg@^8` until TypeORM is upgraded or migrations replace `synchronize`.
 
 ### D25 — Channel contract differs from D05: recipient travels in the alert
 `NotificationChannel.send(alert: MatchedAlert)` with `MatchedAlert = { event, user }` — no separate `target` argument.
