@@ -112,7 +112,7 @@ Retry, dedup, rate limiting, end-user UI, auth, real providers — all excluded 
 
 ### D26 — Scope cut after M2
 **Alternatives:** keep the original 15h plan (M0–M7).
-**Why:** The brief describes a 2–3 hour feature; after about 5 hours only M2 was done, and the plan totalled ~15h. That ratio is itself a planning error, so the remaining work is cut and time-boxed (see the table in `00-plan.md`): the separate test milestone (M5) is dropped because the matcher and planner tests shipped with M2; e2e tests and the RSS stretch (M7) become non-goals; the admin view is limited to the delivery log and event injection. Planned vs actual time is reported in the README.
+**Why:** In the screening call the task was described as one candidates usually finish in 2–3 hours (the brief itself gives no estimate); after about 5 hours only M2 was done, and the plan totalled ~15h. That ratio is itself a planning error, so the remaining work is cut and time-boxed (see the table in `00-plan.md`): the separate test milestone (M5) is dropped because the matcher and planner tests shipped with M2; e2e tests and the RSS stretch (M7) become non-goals; the admin view is limited to the delivery log and event injection. Planned vs actual time is reported in the README.
 
 **Budget note:** M2 was planned at 3h and took about 1h of build time (12:59Z–13:23Z implementation, plus design review), after ~0.5h of prompt preparation.
 
@@ -129,4 +129,11 @@ A versioned slash command, `.claude/commands/review.md`, reviews the branch diff
 ### D29 — Admin view: one page, Material, dev proxy, no shared types package
 **Decisions:** a single standalone page with signals and reactive forms (no NgRx, no routes); Angular Material 22.1.7 with a prebuilt theme; an Angular dev proxy for `/api` instead of CORS; the API moved under the `/api` prefix; `GET /api/deliveries` enriched with event title/type/severity and user name/email via two `findBy(In(...))` queries.
 **Alternatives:** NgRx; plain CSS; CORS in Nest; a `shared/` package for DTOs.
-**Why:** One page with two requests and local state does not need a store — NgRx here would be the overengineering this task warns about. Material gives a readable table and form quickly; the cost is a 624 kB initial bundle against the 500 kB warning budget, accepted for an internal admin tool. The proxy keeps one origin in dev, so the backend needs no CORS setting. The response type is written twice (api and admin), which the M4 pre-review flagged: with one consumer and one endpoint, a shared package costs more than it saves; it becomes worth it with a second consumer or a generated OpenAPI client.
+**Why:** One page with two requests and local state does not need a store — NgRx here would be the overengineering this task warns about. Material gives a readable table and form quickly; the cost is a ~554 kB initial bundle (624 kB before the unused router was removed) against the 500 kB warning budget, accepted for an internal admin tool. The proxy keeps one origin in dev, so the backend needs no CORS setting. The response type is written twice (api and admin), which the M4 pre-review flagged: with one consumer and one endpoint, a shared package costs more than it saves; it becomes worth it with a second consumer or a generated OpenAPI client.
+
+### D30 — Retrospective: what I would do differently
+- **Plan to the size of the brief.** A task pitched as 2–3 hours got a 15-hour plan. Next time: one page of assumptions, a vertical slice and a time box first; widen only with time left.
+- **Put the review loop in from M1.** The versioned `/review` command (D27) found a real M2 bug after merge. Set up on day one, it would have caught it before.
+- **Close every prompt with process hygiene.** Whole process tree killed, ports and process list checked, timestamps copied from the hook log — all learned the hard way (review log rows 11, 18, 23).
+- **Write docs once per milestone.** Several correction passes over the M1 logs cost more than the milestone itself.
+- **At larger scale** the design notes in `02-design.md` apply: queue-based intake, SQL pre-filtering, FK constraints, retries per channel, a Slack app per user, migrations instead of `synchronize`, auth on the admin surface, and e2e tests against a throwaway database.
