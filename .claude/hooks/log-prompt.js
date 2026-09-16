@@ -17,6 +17,10 @@ process.stdin.on('end', () => {
     prompt = input;
   }
 
+  // The IDE integration prepends context blocks (e.g. <ide_opened_file>) that
+  // are not part of what I typed. Strip them so the log is only my own words.
+  prompt = prompt.replace(/<ide_[^>]*>[\s\S]*?<\/ide_[^>]*>\s*/g, '');
+
   const file = path.join(process.cwd(), 'prompts', 'raw.md');
   const entry = `\n## ${new Date().toISOString()}\n\n${prompt.trim()}\n`;
   fs.mkdirSync(path.dirname(file), { recursive: true });
