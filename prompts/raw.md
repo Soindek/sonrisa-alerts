@@ -270,3 +270,88 @@ Fix the findings in docs/reviews/m3-pre-review.md — all six are accepted. Work
 Then run lint, build and test for apps/api and paste output with exit codes. Commit only apps/ with:
 `fix: M3 pre-review findings` and body "Normalizes tags to NFC, escapes Slack control characters in event text, and adds tests for fetch failure, empty-env defaults and the missing-user error, as found by the M3 pre-review."
 Paste `git log --oneline -3` and `git status --short`. Do not push.
+
+## 2026-09-16T16:44:13.980Z
+
+Milestone M4: admin view. Work on the current branch `feat/m4-admin-view`.
+
+The plan below is pre-approved: write your 3–6 line plan into the prompts/log.md entry (timestamp copied from prompts/raw.md) and proceed. Stop and wait only if a dependency beyond the ones listed is needed, a build or test fails and you cannot fix it within this scope, or something contradicts docs/02-design.md.
+
+## Backend (apps/api)
+- `app.setGlobalPrefix('api')` in main.ts. All routes move under /api.
+- `GET /api/deliveries` returns the latest 100 rows, newest first, each enriched with `event: { title, type, severity }` and `user: { name, email }`. Load events and users with two `findBy({ id: In(...) })` queries — no relations (D23). A missing event or user yields `null` for that field. Add a unit test for this mapping (fake repositories, including the null case).
+- Update the route paths and curl examples in docs/02-design.md to the /api prefix. No other doc edits, no other backend changes.
+
+## Frontend (apps/admin)
+- Install exactly `@angular/material@22.1.7` and `@angular/cdk@22.1.7` in apps/admin. No `ng add`. Add a prebuilt Material theme via the `styles` array in angular.json; list `node_modules/@angular/material/prebuilt-themes/` first and pick one that exists. No SCSS, no web fonts from the network. If Material 22 needs anything else (e.g. an animations package), say so and stop.
+- `provideHttpClient(withFetch())` in app.config.ts.
+- Dev proxy: `proxy.conf.json` mapping `/api` → `http://localhost:3000`, wired into the `serve` target in angular.json. No CORS in the backend.
+- One page. Standalone components, signals, OnPush, reactive forms. No NgRx, no extra routes.
+  - `AlertsApi` service: `injectEvent(dto)` and `listDeliveries()`.
+  - `InjectEventForm` (Material form fields): type (select: news / market / disaster), severity (1–5), title, summary, tags (comma-separated → trimmed string[], empty entries dropped). Client-side required and range validation. On submit: POST, then refresh the table. Show a 400 response's `message` array under the form; on success show how many deliveries were created.
+  - `DeliveryLogTable` (mat-table): time (local), event (`type · sev N · title`), user (name), channel, status, error. Status visually distinct for sent / dry-run / failed. A Refresh button. No polling.
+  - Delete the Angular welcome template content.
+
+## Tests (ng test, vitest)
+- `AlertsApi` with `HttpTestingController`: correct URLs and methods.
+- `InjectEventForm`: invalid severity blocks submit; the tags string is split, trimmed and empty entries are dropped; a 400 response's messages are rendered.
+
+## Report (real output)
+1. `npm ls @angular/material @angular/cdk`
+2. `npm run build -w apps/admin`, `npm test -w apps/admin -- --watch=false`, `npm run lint -w apps/api`, `npm run build -w apps/api`, `npm test -w apps/api` — exit codes and test counts
+3. With Postgres, `npm run dev:api` and `npm run dev:admin` running: `curl -s localhost:4200/api/deliveries` (through the proxy) — status and the first row
+4. Stop both dev servers — kill the node processes, not only the npm wrappers — and paste `netstat -ano | findstr ":3000 :4200"` (empty)
+5. `git status --short`
+
+Do not commit. Do not push. I will test the UI myself in the browser.
+
+## 2026-09-16T16:48:18.235Z
+
+<task-notification>
+<task-id>bc71ddejt</task-id>
+<tool-use-id>toolu_01RSGxzdrKExoRGsjrTKM9Pf</tool-use-id>
+<output-file>C:\Users\Gigabyte\AppData\Local\Temp\claude\d--dev-vibecode-sonrisa-alerts\b079460f-ac51-447a-a0b1-7fbdc42a9a53\tasks\bc71ddejt.output</output-file>
+<status>failed</status>
+<summary>Background command "Run admin dev server in background" failed with exit code 1</summary>
+</task-notification>
+
+## 2026-09-16T16:48:43.708Z
+
+<task-notification>
+<task-id>bbmu2z174</task-id>
+<tool-use-id>toolu_01SoLCcRsCwF1FUzHb9kJeAE</tool-use-id>
+<output-file>C:\Users\Gigabyte\AppData\Local\Temp\claude\d--dev-vibecode-sonrisa-alerts\b079460f-ac51-447a-a0b1-7fbdc42a9a53\tasks\bbmu2z174.output</output-file>
+<status>failed</status>
+<summary>Background command "Run API dev server in background" failed with exit code 1</summary>
+</task-notification>
+
+## 2026-09-16T17:25:25.199Z
+
+/review main
+
+## 2026-09-16T17:28:13.668Z
+
+Save your report above verbatim to docs/reviews/m4-pre-review.md. Change nothing else except your prompts/log.md entry.
+
+## 2026-09-16T17:30:35.377Z
+
+Fix the M4 findings. Work on feat/m4-admin-view. Pre-approved; stop only if a build or test fails and you cannot fix it within this scope.
+
+From docs/reviews/m4-pre-review.md (all accepted except #6):
+1. #1 DeliveryLogTable: overlapping refreshes must not show stale data — drive refreshes through a Subject with switchMap (or cancel the previous subscription). Both the Refresh button and the form's `created` output go through it.
+2. #2 InjectEventForm: severity must be a whole number client-side (validator + mat-error "Severity must be a whole number").
+3. #3 New delivery-log-table.spec.ts: status CSS class per status, "unknown event"/"unknown user" for null joins, load-error message, Refresh re-fetches.
+4. #4 inject-event-form.spec.ts: on success the message text is shown and `created` is emitted; a 500 shows the fallback message.
+5. #5 Remove provideRouter and app.routes.ts.
+
+From my manual UI test (docs/04-ai-review-log.md row 24):
+6. Result message: "1 delivery" / "N deliveries" (and "0 deliveries"). Test it.
+7. The previous success or error message is cleared when the form value changes and when a submit is attempted on an invalid form. Test it.
+8. AlertPipelineService: when send() fails, also log it with Logger.warn (event id, user id, channel, error message), like the row-save failure. Extend the existing failure test to assert the warn call.
+
+Docs:
+9. docs/02-design.md: describe the enriched GET /api/deliveries response (event: { title, type, severity } | null, user: { name, email } | null) and the admin page in two short lines. No other doc edits.
+
+Then run lint, build and test for both apps (`npm run lint -w apps/api`, `npm run build -w apps/api`, `npm test -w apps/api`, `npm run build -w apps/admin`, `npm test -w apps/admin -- --watch=false`) and paste output with exit codes and test counts.
+Commit only apps/ as `fix: M4 pre-review and manual test findings` with body: "Serializes table refreshes with switchMap, adds a whole-number check and singular/plural result text, clears stale form messages, logs failed sends, removes the unused router, and adds table and form tests, as found by the M4 pre-review and a manual UI run."
+Do not start dev servers. Paste git log --oneline -3 and git status --short. Do not push.
