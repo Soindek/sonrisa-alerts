@@ -57,3 +57,22 @@ Permissions updated: you may write .env.example but never .env. (1) Create .env.
 ## 2026-09-16T11:51:42.028Z
 
 Decisions: (1) I wrote .env.example myself. (2) Keep .claude/settings.json in this milestone — it's a process artifact like CLAUDE.md. (3) Unstage apps/api/tsconfig.build.tsbuildinfo, add *.tsbuildinfo and coverage/ to the root .gitignore. (4) Delete apps/admin/README.md and apps/api/README.md — the root README comes in M6. (5) Check whether apps/api/.gitignore exists; if Nest generated one, it should be staged. (6) Re-run git add -A, paste git status --short, then commit on feat/m1-skeleton with message M1: repo skeleton (Nest, Angular, compose). Do not push, do not merge. Paste git log --oneline -3 after.
+
+## 2026-09-16T11:58:43.778Z
+
+feat: repo skeleton (Nest, Angular, compose) with body: Nest 12 API and Angular 22 admin as npm workspaces, Postgres 16 via compose with env defaults, root vitest override to work around an npm 10 arborist crash. No feature code yet. Paste git log -1 after.
+
+## 2026-09-16T12:19:40.215Z
+
+I updated docs/03-decision-log.md and docs/04-ai-review-log.md myself — do not edit them. Stage and commit them on feat/m1-skeleton with message docs: M1 decision log and AI review log. Paste git log --oneline -3
+
+## 2026-09-16T12:25:18.287Z
+
+Finish M1 in one go, then stop. No pushes.
+
+docs/04-ai-review-log.md: fill the placeholders with measured results, not guesses. Row 5: run grep -A4 healthcheck docker-compose.yml; if pg_isready has no -U ${POSTGRES_USER}, add it and write "had no -U, added"; otherwise replace the bracketed text with "-U was already present". Row 6: run npm run test -w apps/admin -- --watch=false and write the actual pass count. Fix the typo M5is → M5 is. Check that the em dashes in both docs files are real — characters, not ???.
+docs/03-decision-log.md: replace [X]h in the budget note with the elapsed time between the first M1 prompt in prompts/raw.md and now, rounded to half an hour. Append:
+### D18 — Two commits per milestone: code, then docs / **Why:** Separating feat:fromdocs: lets a reviewer diff the code alone. The one-commit rule was written before anything existed to commit; relaxed after M1.
+CLAUDE.md: change the commit rule to: "One feat: commit per milestone. docs/ and prompts/ go in a separate docs: commit at milestone end; prompt-log lines written after that commit land in the next milestone's docs commit."
+Amend the last commit with all of the above plus prompts/log.md and prompts/raw.md. Body: Decision log D10–D18 and review log rows 2–9 for the repo skeleton milestone, plus prompt logs and the commit-rule update in CLAUDE.md.
+Paste git log -1 --stat and the two lines you wrote into rows 5 and 6. Nothing else.
