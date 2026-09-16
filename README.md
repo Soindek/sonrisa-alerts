@@ -10,14 +10,21 @@ Requirements: Node `^22.22.3` (or 24.15+ / 26), npm 10, Docker.
 
 ```bash
 docker compose up -d            # Postgres 16 on localhost:5432
-npm install
+npm install                     # npm audit reports 5 dev-dependency findings; see D14
+```
+
+Then, **each in its own terminal** (both stay in the foreground; stop them with Ctrl+C):
+
+```bash
 npm run dev:api                 # NestJS on http://localhost:3000/api — seeds 2 users and 3 rules on first start
 npm run dev:admin               # Angular admin on http://localhost:4200 (proxies /api to :3000)
 ```
 
-No `.env` is needed: every setting has a default, and email and Slack run in **dry-run** mode — the message is built and written to the API log instead of being sent, and the delivery row gets status `dry-run`. To change anything, copy `.env.example` to `.env`. If port 5432 is taken, set `POSTGRES_PORT` there.
+No `.env` is needed: every setting has a default, and email and Slack run in **dry-run** mode — the message is built and written to the API log instead of being sent, and the delivery row gets status `dry-run`. To change settings, copy `.env.example` to `.env`. If port 5432 is taken, set `POSTGRES_PORT` there.
 
 Checks: `npm run lint -w apps/api`, `npm test -w apps/api`, `npm test -w apps/admin -- --watch=false`, `npm run build -w apps/admin`.
+
+**Reset:** `docker compose down -v` deletes the database; the next API start seeds it again.
 
 ## Demo
 
@@ -29,24 +36,33 @@ The seed creates these rules. A rule matches when all its conditions hold; an em
 | R2 | Anna Kovács | any | 4 | — | email |
 | R3 | Bence Tóth | market | 2 | interest rate | email, slack |
 
-Inject these from the admin page and watch the delivery log:
+Inject these from the admin page (every field except Tags is required; Tags is comma-separated), or send the matching file from `demo/` with curl:
 
-| Type | Sev | Title | Tags | Result | Shows |
-|---|---|---|---|---|---|
-| market | 3 | Interest rate hike | — | Bence: email + slack | one rule, two channels |
-| disaster | 4 | Árvíz a Dunán | — | Anna: **one** email | R1 and R2 both match; one delivery per user and channel (D19) |
-| disaster | 3 | Heavy rain in the north | `FLOOD, hungary` | Anna: email | keyword matched as a tag, case-insensitive |
-| market | 3 | Corporate earnings beat forecasts | — | nothing | whole-word matching: "rate" does not hit "corporate" (D20) |
-
-**Failure isolation (D22):** stop the API, put `SMTP_HOST=localhost` and `SMTP_PORT=2525` (a closed port) into `.env`, start it again and inject the first case. The email row is `failed` with `ECONNREFUSED`, the Slack row is still `dry-run`, and the request succeeds. Remove the two lines afterwards.
-
-From a shell instead of the UI (Git Bash; `\u` escapes keep non-ASCII text intact on Windows):
+| # | Type | Sev | Title | Summary | Tags | Result | Shows |
+|---|---|---|---|---|---|---|---|
+| 1 | market | 3 | Interest rate hike | The central bank raised rates by 25 bp. | — | Bence: email + slack | one rule, two channels |
+| 2 | disaster | 4 | Árvíz a Dunán | Rekordközeli vízszint Budapestnél. | — | Anna: **one** email | R1 (keyword) and R2 (severity ≥ 4) both match; one delivery per user and channel, carrying the first rule's id (D19) |
+| 3 | disaster | 3 | Heavy rain in the north | Rivers are rising after two days of rain. | FLOOD, hungary | Anna: email | keyword matched as a tag, case-insensitive; severity 3 keeps R2 out |
+| 4 | market | 3 | Corporate earnings beat forecasts | Quarterly results were strong. | — | nothing | whole-word matching: "rate" does not hit "corporate" (D20) |
 
 ```bash
-curl -s -X POST localhost:3000/api/events -H 'Content-Type: application/json' \
-  -d '{"type":"disaster","severity":4,"title":"Árvíz a Dunán","summary":"Rekordközeli vízszint."}'
+curl -s -X POST localhost:3000/api/events -H 'Content-Type: application/json' --data-binary @demo/case-2-arviz.json
 curl -s localhost:3000/api/deliveries
 ```
+
+The files are pure ASCII (`\u` escapes for Hungarian letters), so the text arrives intact from any Windows shell; typing accented text into a curl command line may not. Only one rule id per delivery is visible; that R1 and R2 both matched in case 2 is what the dedup unit tests in `apps/api/src/matching/plan-deliveries.spec.ts` cover — the visible part is that Anna gets one email, not two.
+
+**Failure isolation (D22):**
+
+1. Stop the API (Ctrl+C in its terminal).
+2. Create a `.env` in the repo root containing only these two lines (a closed port):
+   ```
+   SMTP_HOST=localhost
+   SMTP_PORT=2525
+   ```
+3. Start the API again and send case 1 (`demo/case-1-market.json`) or inject it from the UI.
+4. Expected: the email row is `failed` with `connect ECONNREFUSED` (`::1:2525` or `127.0.0.1:2525`), the Slack row is still `dry-run`, and the request returns 201.
+5. Stop the API, delete `.env`, start it again.
 
 ## How it works
 
@@ -57,6 +73,7 @@ curl -s localhost:3000/api/deliveries
 ```
 apps/api     NestJS 12, TypeORM 0.3, Postgres — events, rules, matching, channels, delivery log
 apps/admin   Angular 22, Material — inject-event form + delivery log table
+demo/        request bodies for the demo cases
 docs/        plan, assumptions, design, decisions, AI review log, review reports
 prompts/     every prompt sent to Claude Code: raw.md (verbatim, by hook), log.md (summary + outcome)
 .claude/     project settings, the prompt-logging hook, the /review command
@@ -97,5 +114,5 @@ The original plan totalled ~15h for a brief that describes a short feature. That
 - No retries, queue, dedup of similar events or rate limiting (non-goals, `docs/01-assumptions.md`).
 - Event and delivery rows are not written in one transaction (D22).
 - Slack uses one shared webhook, so the message names the recipient (D28).
-- TypeORM `synchronize` instead of migrations; it triggers a `pg` deprecation warning at startup (D23, D24).
+- TypeORM `synchronize` instead of migrations; schema sync can print a `pg` deprecation warning at startup, typically once the tables exist (D23, D24).
 - Unit tests only (api 42, admin 19); no end-to-end tests (D26). The admin bundle is ~554 kB against a 500 kB warning budget (D29).
