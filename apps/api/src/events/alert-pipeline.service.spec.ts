@@ -76,9 +76,11 @@ function setup({ rules, users = [bence], channels, saveDelivery = (delivery) => 
 }
 
 let logError: ReturnType<typeof vi.spyOn>;
+let logWarn: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
   logError = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  logWarn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 });
 
 afterEach(() => {
@@ -102,6 +104,7 @@ describe('AlertPipelineService', () => {
       { eventId: 'e1', userId: 'u1', ruleId: 'r1', channel: 'email', status: 'dry-run', error: null },
       { eventId: 'e1', userId: 'u1', ruleId: 'r1', channel: 'slack', status: 'failed', error: 'webhook down' },
     ]);
+    expect(logWarn).toHaveBeenCalledExactlyOnceWith('Send failed: event e1, user u1, channel slack: webhook down');
   });
 
   it('saves a failed row for an unknown channel id', async () => {

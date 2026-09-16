@@ -1,12 +1,12 @@
-import { Component, signal } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { DeliveryLogTable } from './delivery-log-table';
+import { InjectEventForm } from './inject-event-form';
 
 @Component({
-  imports: [RouterOutlet],
+  imports: [InjectEventForm, DeliveryLogTable],
   selector: 'app-root',
   styleUrl: './app.css',
   templateUrl: './app.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class App {
-  protected readonly title = signal('admin');
-}
+export class App {}
