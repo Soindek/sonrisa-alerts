@@ -43,6 +43,24 @@ describe('planDeliveries', () => {
     ]);
   });
 
+  it('gives the ruleId to a later matching rule when an earlier rule of the same user and channel does not match', () => {
+    const rules = [
+      rule({ id: 'r1', userId: 'u1', eventTypes: ['market'], channels: ['email'] }),
+      rule({ id: 'r2', userId: 'u1', channels: ['email'] }),
+    ];
+
+    expect(planDeliveries(event, rules)).toEqual([{ userId: 'u1', ruleId: 'r2', channel: 'email' }]);
+  });
+
+  it('plans one delivery per channel of a single rule', () => {
+    const rules = [rule({ id: 'r1', userId: 'u1', channels: ['email', 'slack'] })];
+
+    expect(planDeliveries(event, rules)).toEqual([
+      { userId: 'u1', ruleId: 'r1', channel: 'email' },
+      { userId: 'u1', ruleId: 'r1', channel: 'slack' },
+    ]);
+  });
+
   it('plans separate deliveries for two users', () => {
     const rules = [
       rule({ id: 'r1', userId: 'u1', channels: ['email'] }),

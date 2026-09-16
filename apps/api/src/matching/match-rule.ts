@@ -15,7 +15,7 @@ export interface MatchableRule {
 }
 
 function tokenize(text: string): string[] {
-  return text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+  return text.normalize('NFC').toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
 }
 
 function containsSequence(tokens: string[], sequence: string[]): boolean {

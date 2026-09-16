@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { ChannelRegistry } from '../channels/channel-registry.js';
@@ -16,6 +16,8 @@ interface DeliveryOutcome {
 
 @Injectable()
 export class AlertPipelineService {
+  private readonly logger = new Logger(AlertPipelineService.name);
+
   constructor(
     @InjectRepository(Event) private readonly events: Repository<Event>,
     @InjectRepository(AlertRule) private readonly rules: Repository<AlertRule>,
@@ -47,7 +49,14 @@ export class AlertPipelineService {
     const deliveries: Delivery[] = [];
     for (const plan of planned) {
       const outcome = await this.deliver(event, usersById.get(plan.userId), plan.channel);
-      deliveries.push(await this.deliveries.save(this.deliveries.create({ eventId: event.id, ...plan, ...outcome })));
+      try {
+        deliveries.push(await this.deliveries.save(this.deliveries.create({ eventId: event.id, ...plan, ...outcome })));
+      } catch (err) {
+        // A lost log row must not fail the request or the remaining deliveries.
+        this.logger.error(
+          `Failed to save delivery: event ${event.id}, user ${plan.userId}, channel ${plan.channel}: ${errorMessage(err)}`,
+        );
+      }
     }
 
     return { event, deliveries };
@@ -66,7 +75,11 @@ export class AlertPipelineService {
       const result = await channel.send({ event, user });
       return { status: result.status, error: null };
     } catch (err) {
-      return { status: 'failed', error: err instanceof Error ? err.message : String(err) };
+      return { status: 'failed', error: errorMessage(err) };
     }
   }
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }

@@ -24,7 +24,7 @@ export class SeedService implements OnApplicationBootstrap {
     const rules: Partial<AlertRule>[] = [
       { userId: anna.id, eventTypes: ['disaster'], minSeverity: 3, keywords: ['árvíz', 'flood'], channels: ['email'] },
       { userId: anna.id, eventTypes: [], minSeverity: 4, keywords: [], channels: ['email'] },
-      { userId: bence.id, eventTypes: ['market'], minSeverity: 2, keywords: ['interest rate'], channels: ['email'] },
+      { userId: bence.id, eventTypes: ['market'], minSeverity: 2, keywords: ['interest rate'], channels: ['email', 'slack'] },
     ];
     for (const rule of rules) {
       await this.rules.save(this.rules.create(rule));

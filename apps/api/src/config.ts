@@ -2,11 +2,11 @@
 
 export function postgresConfig() {
   return {
-    host: process.env.POSTGRES_HOST ?? 'localhost',
-    port: Number(process.env.POSTGRES_PORT ?? 5432),
-    username: process.env.POSTGRES_USER ?? 'sonrisa',
-    password: process.env.POSTGRES_PASSWORD ?? 'change-me',
-    database: process.env.POSTGRES_DB ?? 'sonrisa_alerts',
+    host: process.env.POSTGRES_HOST || 'localhost',
+    port: Number(process.env.POSTGRES_PORT || 5432),
+    username: process.env.POSTGRES_USER || 'sonrisa',
+    password: process.env.POSTGRES_PASSWORD || 'change-me',
+    database: process.env.POSTGRES_DB || 'sonrisa_alerts',
   };
 }
 
@@ -22,9 +22,20 @@ export function smtpConfig(): SmtpConfig {
   return {
     // An empty SMTP_HOST counts as unset, so the email channel stays in dry-run mode.
     host: process.env.SMTP_HOST || undefined,
-    port: Number(process.env.SMTP_PORT ?? 587),
+    port: Number(process.env.SMTP_PORT || 587),
     user: process.env.SMTP_USER || undefined,
     pass: process.env.SMTP_PASS || undefined,
     from: process.env.SMTP_FROM || 'alerts@example.com',
+  };
+}
+
+export interface SlackConfig {
+  webhookUrl: string | undefined;
+}
+
+export function slackConfig(): SlackConfig {
+  return {
+    // An empty SLACK_WEBHOOK_URL counts as unset, so the Slack channel stays in dry-run mode.
+    webhookUrl: process.env.SLACK_WEBHOOK_URL || undefined,
   };
 }
