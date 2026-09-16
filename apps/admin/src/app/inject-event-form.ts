@@ -1,11 +1,23 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, output, signal } from '@angular/core';
-import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import {
+  type AbstractControl,
+  NonNullableFormBuilder,
+  ReactiveFormsModule,
+  type ValidationErrors,
+  Validators,
+} from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { AlertsApi, EVENT_TYPES, type EventType } from './alerts-api';
+
+export function wholeNumber(control: AbstractControl): ValidationErrors | null {
+  const value: unknown = control.value;
+  return value === null || value === '' || Number.isInteger(value) ? null : { wholeNumber: true };
+}
 
 export function parseTags(value: string): string[] {
   return value
@@ -33,22 +45,29 @@ export class InjectEventForm {
 
   readonly form = inject(NonNullableFormBuilder).group({
     type: ['' as EventType | '', Validators.required],
-    severity: [3, [Validators.required, Validators.min(1), Validators.max(5)]],
+    severity: [3, [Validators.required, wholeNumber, Validators.min(1), Validators.max(5)]],
     title: ['', Validators.required],
     summary: ['', Validators.required],
     tags: [''],
   });
 
+  constructor() {
+    this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.clearMessages());
+  }
+
   submit(): void {
-    if (this.form.invalid || this.submitting()) {
+    if (this.submitting()) {
+      return;
+    }
+    if (this.form.invalid) {
+      this.clearMessages();
       this.form.markAllAsTouched();
       return;
     }
 
     const { type, severity, title, summary, tags } = this.form.getRawValue();
     this.submitting.set(true);
-    this.errors.set([]);
-    this.createdCount.set(null);
+    this.clearMessages();
 
     this.api.injectEvent({ type: type as EventType, severity, title, summary, tags: parseTags(tags) }).subscribe({
       next: (response) => {
@@ -61,6 +80,11 @@ export class InjectEventForm {
         this.errors.set(errorMessages(err));
       },
     });
+  }
+
+  private clearMessages(): void {
+    this.errors.set([]);
+    this.createdCount.set(null);
   }
 }
 

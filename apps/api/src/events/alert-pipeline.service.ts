@@ -75,7 +75,9 @@ export class AlertPipelineService {
       const result = await channel.send({ event, user });
       return { status: result.status, error: null };
     } catch (err) {
-      return { status: 'failed', error: errorMessage(err) };
+      const error = errorMessage(err);
+      this.logger.warn(`Send failed: event ${event.id}, user ${user.id}, channel ${channelId}: ${error}`);
+      return { status: 'failed', error };
     }
   }
 }
