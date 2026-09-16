@@ -1,4 +1,16 @@
 {
+  "permissions": {
+    "deny": [
+      "Write(.env)",
+      "Edit(.env)",
+      "Read(.env)",
+      "Write(**/.env)",
+      "Edit(**/.env)",
+      "Read(**/.env)",
+      "Write(.env.local)",
+      "Write(.env.production)"
+    ]
+  },
   "hooks": {
     "UserPromptSubmit": [
       {

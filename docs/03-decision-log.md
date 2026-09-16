@@ -47,4 +47,36 @@ Retry, dedup, rate limiting, end-user UI, auth, real providers — all excluded 
 **Why:** The submission is the process. If the record is not trustworthy, nothing else matters.
 
 ---
-*(entries continue during the build)*
+### D10 — Root `overrides.vitest = 4.1.11`
+**Alternatives:** `.npmrc` with `legacy-peer-deps=true`; a newer npm; removing vitest from both apps.
+**Why:** `npm install` crashed in npm 10's arborist (`Cannot read properties of null (reading 'edgesOut')`) whenever an app depended on vitest 4. Several variants were dry-run in scratch copies; only removing vitest entirely or pinning it via root overrides passed. 4.1.11 is what both apps' `^4.1.2` ranges resolve to anyway. `legacy-peer-deps` was rejected because it disables peer checks repo-wide; a newer npm because the M1 prompt fixed the toolchain at npm 10. Which package requests `vitest@*` was not identified — time-boxed and closed. Remove the override once npm 10 is fixed.
+
+### D11 — `engines.node = ^22.22.3 || ^24.15.0 || ^26.0.0`
+**Alternatives:** `>=22`; my local patch version as minimum.
+**Why:** Based on Angular CLI 22's range (`^22.22.3 || ^24.15.0 || >=26.0.0`), with the last term narrowed to `^26.0.0` so an untested future major is not declared supported. Nest 12 declares `>= 20`; the stricter wins. Not enforced (`engine-strict` off): it documents, it does not block.
+
+### D12 — Compose defaults for all `POSTGRES_*` vars
+**Alternatives:** required vars only.
+**Why:** The plan's "done" is clone → `docker compose up` → two npm commands. Defaults (`change-me` password) make that work with no `.env`; required vars fail on a clean clone.
+
+### D13 — `.env` deny rules narrowed to an explicit list
+**Alternatives:** keep the `.env*` glob; no deny at all.
+**Why:** The glob also blocked `.env.example`. Project settings now deny Read/Write/Edit on `.env` and Write on `.env.local` / `.env.production`. A user-level rule still blocks `.env.example`, so I wrote that file myself. Known limit: the Read deny covers the Read tool only, not `cat` via Bash.
+
+### D14 — `npm audit` findings left as-is
+**Alternatives:** `npm audit fix`; `npm audit fix --force`.
+**Why:** 5 findings (2 high), all in dev dependencies — `npm audit --omit=dev` is clean. Out of scope for a 24h take-home; `--force` would bump majors blindly.
+
+### D15 — CLI-generated READMEs deleted in both apps
+**Why:** Boilerplate noise for a reviewer. The root README (M6) is the single entry point.
+
+### D16 — Commit message format follows CLAUDE.md, not my ad-hoc instruction
+**Why:** My instruction (`M1: ...`) contradicted the `<type>: <summary>` rule in CLAUDE.md. Claude Code committed with my message as instructed, then flagged the mismatch; I amended to `feat: ...`.
+
+### D17 — Deferred: remove `vite-tsconfig-paths` from `apps/api`
+**Why:** No api tsconfig declares `paths`, so the plugin does nothing; its comment refers to `nest g library`, which this project does not use. Vite 8's native `resolve.tsconfigPaths` exists but is marked experimental and is not needed without aliases. Scheduled for the start of M2, not worth reopening M1.
+
+**Budget note:** M1 was planned at 1h and took 1.5h, almost entirely the npm crash. Recorded rather than hidden.
+
+### D18 — Two commits per milestone: code, then docs
+**Why:** Separating `feat:` from `docs:` lets a reviewer diff the code alone. The one-commit rule was written before anything existed to commit; relaxed after M1.

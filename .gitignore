@@ -5,6 +5,8 @@ node_modules/
 dist/
 build/
 .angular/
+*.tsbuildinfo
+coverage/
 
 # env / secrets
 .env
