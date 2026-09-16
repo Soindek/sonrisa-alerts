@@ -27,18 +27,18 @@ Consequences for how I work:
 
 ## Milestones and order
 
-| M | Content | Budget |
-|---|---------|--------|
-| M0 | Read brief, write plan, assumptions, initial decisions. No code. | 1.5h |
-| M1 | Repo skeleton: NestJS + Angular workspace, docker-compose (Postgres), CLAUDE.md with process rules, CI-free. | 1h |
-| M2 | Vertical slice: one simulated event → rule matching (type, severity, keywords) → email adapter (dry-run) → delivery log row. Matcher and planner unit tests included. Demoable. | 3h → **~1h actual** |
-| M3 | Slack adapter via the channel registry; NFC normalization fix; registry and Slack unit tests. | ~~1.5h~~ **45 min** |
-| M4 | Admin view: delivery log table + "inject event" form. Nothing else. | ~~2.5h~~ **1.5h** |
-| ~~M5~~ | ~~Tests on matcher + delivery orchestration.~~ Dropped: shipped with M2 (D26). | — |
-| M6 | README (setup, demo, time spent), process artifacts consolidated. | ~~2h~~ **1h** |
-| ~~M7~~ | ~~Stretch: RSS event source.~~ Dropped: non-goal (D26). | — |
+| M | Content | Budget | Actual |
+|---|---------|--------|--------|
+| M0 | Read brief, write plan, assumptions, initial decisions. No code. | 1.5h | ~2h (10:15–12:05) |
+| M1 | Repo skeleton: NestJS + Angular workspace, docker-compose (Postgres), CLAUDE.md with process rules, CI-free. | 1h | ~2h (npm crash, D10) |
+| M2 | Vertical slice: one simulated event → rule matching (type, severity, keywords) → email adapter (dry-run) → delivery log row. Matcher and planner unit tests included. Demoable. | 3h | ~1h hands-on |
+| M3 | Slack adapter via the channel registry; NFC normalization fix; registry and Slack unit tests. | ~~1.5h~~ **45 min** | ~40 min |
+| M4 | Admin view: delivery log table + "inject event" form. Nothing else. | ~~2.5h~~ **1.5h** | ~1h |
+| ~~M5~~ | ~~Tests on matcher + delivery orchestration.~~ Dropped: shipped with M2 (D26). | — | — |
+| M6 | README (setup, demo, time spent), process artifacts consolidated. | ~~2h~~ **1h** | see README |
+| ~~M7~~ | ~~Stretch: RSS event source.~~ Dropped: non-goal (D26). | — | — |
 
-**Re-plan after M2 (D26):** actual time for M0–M2 was ~5h against a brief that describes 1–2 hours of work, and the original plan totalled ~15h. The remaining scope is cut and time-boxed rather than extended. The original rows are kept struck through so the change stays visible.
+**Re-plan after M2 (D26):** actual time for M0–M2 was ~5h against a task the recruiter described in the screening call as usually taking 2–3 hours, and the original plan totalled ~15h. The remaining scope is cut and time-boxed rather than extended. The original rows are kept struck through so the change stays visible.
 
 Why this order: M2 before anything wide, because a partial vertical slice is demoable and a half-built horizontal layer is not. Admin view (M4) after the channel work (M3) because the admin view displays delivery results — building it earlier would mean building it against fake data twice. Tests (M5) deliberately after the feature is shaped, but the matcher gets tested inline in M2 because that is where AI-generated logic is most likely to be subtly wrong.
 
@@ -49,6 +49,7 @@ Before opening Claude Code, I worked the brief through in a Claude desktop conve
 ## How I use the AI
 
 - Claude Code for implementation, one milestone per session where possible.
+- A second assistant, Claude in a separate desktop chat with access to the repo folder, acted as my reviewer and scribe: it checked Claude Code's reports against the files, drafted the prompts, and from M1 on wrote parts of the docs directly (decision entries, review-log rows, the M6 README, the failure patterns). I reviewed every one of those diffs before committing. Those edits went through no Claude Code prompt, so they have no `prompts/raw.md` entry; the git diff and this note are their record.
 - Milestone prompts are drafted by me in rough Hungarian, then reworded into clean English in a separate chat before being sent, so the recorded prompt is the one actually used. In-between prompts (corrections, "run the tests") are sent as typed. All prompts are logged verbatim by a `UserPromptSubmit` hook into `prompts/raw.md`; English summaries in `prompts/log.md`.
 - The AI works on feature branches only, commits only on my explicit instruction (one commit per milestone, short messages), never pushes or merges. I review every diff before it reaches `main`.
 - I do not accept generated code without one of: running it, reading the relevant part, or a test. Which one, and the outcome, goes into `04-ai-review-log.md`.

@@ -35,4 +35,11 @@ Verdict values: `accepted` · `accepted with edits` · `rejected` · `rewritten 
 Check values: `ran it` · `read it` · `unit test` · `manual test in UI` · `compared with docs`
 
 ## Patterns noticed
-*(recurring failure modes of the AI on this task — filled in at the end)*
+Recurring behaviour across M0–M4, and what I changed in the process because of it.
+
+1. **Confident explanations that were false.** The npm crash blamed on a package nothing declared (row 3), "typeorm 1.1.1 published today" (row 13), "process stopped, port free" (rows 11, 23). Each sounded like a finding and was not one. Response: I asked for the command output behind every claim, and prompts now end with "paste real output".
+2. **Background processes left running.** Twice a session killed the process listening on the port but left the `nest start --watch` parent alive (rows 11, 23). Response: prompts now require killing the whole process tree and proving it with netstat plus a process listing.
+3. **Its own clock instead of the source of truth.** Prompt-log timestamps came from the model, 8–14 s off the hook's `raw.md` (row 18). Response: the rule is now written into `CLAUDE.md`.
+4. **Edits beyond the instruction.** A review-log row nobody asked for (row 10), a design-doc section outside the request that it later reverted itself (M3). Response: prompts name the only files that may change.
+5. **The reviewer is useful but not sufficient.** The fresh-session pre-review found 19 issues across three runs, including a real bug in M2 that my own reading missed (row 20). It also gave diff positions instead of file lines (row 21, fixed in the command) and missed three of the four UI defects a manual run found (row 25). Response: pre-review and a manual run are both part of the loop.
+6. **Good self-correction when output is checked.** It caught its own non-UTF-8 test request (row 16), reverted its own scope creep, disclosed missing Unicode normalization (row 19) and flagged my commit message that broke the rules (row 8). Most of this happened because every prompt required evidence.
