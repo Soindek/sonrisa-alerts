@@ -34,12 +34,17 @@ export class SlackChannel implements NotificationChannel {
 }
 
 function renderText({ event, user }: MatchedAlert): string {
-  const tags = event.tags.length > 0 ? event.tags.join(', ') : '(none)';
+  const tags = event.tags.length > 0 ? event.tags.map(escape).join(', ') : '(none)';
   return (
-    `*[${event.type} · severity ${event.severity}]* ${event.title}\n` +
-    `${event.summary}\n` +
+    `*[${event.type} · severity ${event.severity}]* ${escape(event.title)}\n` +
+    `${escape(event.summary)}\n` +
     `Tags: ${tags}\n` +
     `Occurred at: ${event.occurredAt.toISOString()}\n` +
-    `For: ${user.name} ${user.email}`
+    `For: ${escape(user.name)} ${escape(user.email)}`
   );
+}
+
+/** Slack reads <...> as mentions and links, so event text must not be able to produce them. */
+function escape(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }

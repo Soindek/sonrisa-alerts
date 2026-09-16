@@ -73,6 +73,10 @@ describe('matchesRule', () => {
       expect(matchesRule(event({ title }), rule({ keywords: ['árvíz'] }))).toBe(true);
     });
 
+    it('matches a decomposed (NFD) tag against a precomposed keyword', () => {
+      expect(matchesRule(event({ tags: ['árvíz'] }), rule({ keywords: ['árvíz'] }))).toBe(true);
+    });
+
     it('applies no keyword filter when keywords is empty', () => {
       expect(matchesRule(event({ title: 'Anything at all' }), rule({ keywords: [] }))).toBe(true);
     });

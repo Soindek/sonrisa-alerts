@@ -14,8 +14,12 @@ export interface MatchableRule {
   keywords: string[];
 }
 
+function normalize(text: string): string {
+  return text.normalize('NFC').toLowerCase();
+}
+
 function tokenize(text: string): string[] {
-  return text.normalize('NFC').toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+  return normalize(text).match(/[\p{L}\p{N}]+/gu) ?? [];
 }
 
 function containsSequence(tokens: string[], sequence: string[]): boolean {
@@ -39,14 +43,14 @@ export function matchesRule(event: MatchableEvent, rule: MatchableRule): boolean
 
   const titleTokens = tokenize(event.title);
   const summaryTokens = tokenize(event.summary);
-  const tags = event.tags.map((tag) => tag.toLowerCase());
+  const tags = event.tags.map(normalize);
 
   return rule.keywords.some((keyword) => {
     const keywordTokens = tokenize(keyword);
     return (
       containsSequence(titleTokens, keywordTokens) ||
       containsSequence(summaryTokens, keywordTokens) ||
-      tags.includes(keyword.toLowerCase())
+      tags.includes(normalize(keyword))
     );
   });
 }

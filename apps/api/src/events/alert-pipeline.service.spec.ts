@@ -118,7 +118,7 @@ describe('AlertPipelineService', () => {
 
     const result = await service.process(dto);
 
-    expect(result.deliveries).toMatchObject([{ channel: 'email', status: 'failed' }]);
+    expect(result.deliveries).toMatchObject([{ channel: 'email', status: 'failed', error: 'Recipient user not found' }]);
     expect(send).not.toHaveBeenCalled();
   });
 
