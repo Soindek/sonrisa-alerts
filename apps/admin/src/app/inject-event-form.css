@@ -1,0 +1,32 @@
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.row {
+  display: flex;
+  gap: 16px;
+}
+
+.row mat-form-field {
+  flex: 1;
+}
+
+.full {
+  width: 100%;
+}
+
+button {
+  align-self: flex-start;
+}
+
+.errors {
+  color: #b3261e;
+  margin: 12px 0 0;
+}
+
+.success {
+  color: #1b6e3a;
+  margin: 12px 0 0;
+}

@@ -1,0 +1,61 @@
+<form [formGroup]="form" (ngSubmit)="submit()">
+  <div class="row">
+    <mat-form-field>
+      <mat-label>Type</mat-label>
+      <mat-select formControlName="type">
+        @for (type of eventTypes; track type) {
+          <mat-option [value]="type">{{ type }}</mat-option>
+        }
+      </mat-select>
+      @if (form.controls.type.hasError('required')) {
+        <mat-error>Type is required</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field>
+      <mat-label>Severity (1–5)</mat-label>
+      <input matInput type="number" min="1" max="5" formControlName="severity" />
+      @if (form.controls.severity.hasError('required')) {
+        <mat-error>Severity is required</mat-error>
+      } @else if (form.controls.severity.hasError('min') || form.controls.severity.hasError('max')) {
+        <mat-error>Severity must be between 1 and 5</mat-error>
+      }
+    </mat-form-field>
+  </div>
+
+  <mat-form-field class="full">
+    <mat-label>Title</mat-label>
+    <input matInput formControlName="title" />
+    @if (form.controls.title.hasError('required')) {
+      <mat-error>Title is required</mat-error>
+    }
+  </mat-form-field>
+
+  <mat-form-field class="full">
+    <mat-label>Summary</mat-label>
+    <textarea matInput rows="3" formControlName="summary"></textarea>
+    @if (form.controls.summary.hasError('required')) {
+      <mat-error>Summary is required</mat-error>
+    }
+  </mat-form-field>
+
+  <mat-form-field class="full">
+    <mat-label>Tags</mat-label>
+    <input matInput formControlName="tags" placeholder="flood, budapest" />
+    <mat-hint>Comma-separated</mat-hint>
+  </mat-form-field>
+
+  <button mat-flat-button type="submit" [disabled]="submitting()">Inject event</button>
+</form>
+
+@if (errors().length > 0) {
+  <ul class="errors">
+    @for (error of errors(); track $index) {
+      <li>{{ error }}</li>
+    }
+  </ul>
+}
+
+@if (createdCount() !== null) {
+  <p class="success">Event created, {{ createdCount() }} deliveries.</p>
+}

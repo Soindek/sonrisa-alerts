@@ -1,0 +1,41 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+table {
+  width: 100%;
+}
+
+.status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-sent {
+  background: #d7f5dd;
+  color: #1b6e3a;
+}
+
+.status-dry-run {
+  background: #e3e6ea;
+  color: #444c56;
+}
+
+.status-failed {
+  background: #fbdad7;
+  color: #b3261e;
+}
+
+.missing,
+.load-error {
+  color: #b3261e;
+}
+
+.empty {
+  padding: 16px;
+}

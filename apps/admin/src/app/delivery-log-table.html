@@ -1,0 +1,60 @@
+<div class="toolbar">
+  <h2>Delivery log</h2>
+  <button mat-stroked-button type="button" (click)="refresh()" [disabled]="loading()">Refresh</button>
+</div>
+
+@if (loadError(); as message) {
+  <p class="load-error">{{ message }}</p>
+}
+
+<table mat-table [dataSource]="rows()">
+  <ng-container matColumnDef="time">
+    <th mat-header-cell *matHeaderCellDef>Time</th>
+    <td mat-cell *matCellDef="let row">{{ row.createdAt | date: 'yyyy-MM-dd HH:mm:ss' }}</td>
+  </ng-container>
+
+  <ng-container matColumnDef="event">
+    <th mat-header-cell *matHeaderCellDef>Event</th>
+    <td mat-cell *matCellDef="let row">
+      @if (row.event; as event) {
+        {{ event.type }} · sev {{ event.severity }} · {{ event.title }}
+      } @else {
+        <span class="missing">unknown event</span>
+      }
+    </td>
+  </ng-container>
+
+  <ng-container matColumnDef="user">
+    <th mat-header-cell *matHeaderCellDef>User</th>
+    <td mat-cell *matCellDef="let row">
+      @if (row.user; as user) {
+        {{ user.name }}
+      } @else {
+        <span class="missing">unknown user</span>
+      }
+    </td>
+  </ng-container>
+
+  <ng-container matColumnDef="channel">
+    <th mat-header-cell *matHeaderCellDef>Channel</th>
+    <td mat-cell *matCellDef="let row">{{ row.channel }}</td>
+  </ng-container>
+
+  <ng-container matColumnDef="status">
+    <th mat-header-cell *matHeaderCellDef>Status</th>
+    <td mat-cell *matCellDef="let row">
+      <span class="status" [class]="'status-' + row.status">{{ row.status }}</span>
+    </td>
+  </ng-container>
+
+  <ng-container matColumnDef="error">
+    <th mat-header-cell *matHeaderCellDef>Error</th>
+    <td mat-cell *matCellDef="let row">{{ row.error }}</td>
+  </ng-container>
+
+  <tr mat-header-row *matHeaderRowDef="columns"></tr>
+  <tr mat-row *matRowDef="let row; columns: columns"></tr>
+  <tr class="mat-row" *matNoDataRow>
+    <td class="mat-cell empty" [attr.colspan]="columns.length">No deliveries yet.</td>
+  </tr>
+</table>
