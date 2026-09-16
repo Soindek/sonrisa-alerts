@@ -26,3 +26,4 @@ Things the brief does not say. Each one is a decision I made so that work could 
 | End-user alert management UI | Angular feature module over the existing rules API |
 | Auth / roles for admin | Guard on the admin routes; out of scope for 24h |
 | Real external event providers | Additional `EventSource` implementations |
+| End-to-end / HTTP tests | Nest testing module + supertest against a throwaway Postgres (dropped in D26; logic is unit-tested) |

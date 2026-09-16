@@ -80,3 +80,37 @@ Retry, dedup, rate limiting, end-user UI, auth, real providers — all excluded 
 
 ### D18 — Two commits per milestone: code, then docs
 **Why:** Separating `feat:` from `docs:` lets a reviewer diff the code alone. The one-commit rule was written before anything existed to commit; relaxed after M1.
+
+### D19 — Delivery unit: one per (event, user, channel)
+**Alternatives:** one delivery per matching rule.
+**Why:** A user with two overlapping rules wants one email about one event, not two. `planDeliveries` collapses matches per `(userId, channel)`; the row keeps the first matching rule's id, where "first" means rules ordered by `createdAt`, then `id`. `createdAt` was added to `AlertRule` for this — ordering by uuid alone would have been arbitrary. At larger scale a unique constraint on `(eventId, userId, channel)` backs the planner.
+
+### D20 — Keyword matching: case-insensitive whole-token sequences
+**Alternatives:** substring match (`includes`).
+**Why:** Substring matching lets "rate" hit "corporate". Title and summary are lowercased and tokenized with `/[\p{L}\p{N}]+/gu` (Unicode-aware, so "árvíz" works; `\b` is not); a keyword matches if its token sequence appears contiguously ("interest rate" matches "Interest Rate hike"). Tags match only on exact, case-insensitive equality. Known gap: no Unicode normalization yet, so a decomposed "á" does not match — fixed in M3 with NFC.
+
+### D21 — An empty condition means "no filter"
+**Alternatives:** empty `eventTypes` matches nothing.
+**Why:** Follows A3 ("all *specified* conditions"). A rule with no keywords is a pure type/severity rule; a rule with no types listens to every type.
+
+### D22 — Synchronous pipeline inside the request, failures isolated per delivery
+**Alternatives:** queue + workers; outbox.
+**Why:** One process, one request, easy to follow and to demo: persist event → load rules → plan → send → persist one row per delivery → `201 { event, deliveries }`. An unknown channel, a missing user or a throwing `send()` becomes a `failed` row and never fails the request or the other deliveries. Known limitation: event and delivery rows are not one transaction, so a send whose row write fails goes unrecorded. At larger scale: `202` + queue/outbox, per-channel workers with retries (already a non-goal in `01-assumptions.md`).
+
+### D23 — Persistence shortcuts for the slice
+**Decisions:** TypeORM `synchronize` only when `NODE_ENV !== 'production'`, no migrations; ids stored as plain uuid columns without relations or FKs; users loaded in a separate query; seed on bootstrap only when `users` is empty, with `@example.com` addresses so a configured SMTP cannot mail a real person; rules seeded one by one so their `createdAt` order is deterministic.
+**Why:** Each shortcut removes setup time without changing the behaviour under test. At larger scale: migrations, FK constraints, a seed script outside the app.
+
+### D24 — Dependencies: typeorm 0.3.31, no `@types/nodemailer`, no config library
+**Alternatives:** typeorm 1.1.1 (`latest`); `@nestjs/config`.
+**Why:** Claude Code said it was unsure of the 1.x API. I pinned the maintained 0.3 line (0.3.31, July 2026) so its output could be checked against an API it knows; `@nestjs/typeorm` 12 supports both. Moving to 1.x is a separate step. `nodemailer` 10 ships its own types, so `@types/nodemailer` (8.x) would describe the wrong API. The root `.env` is loaded with Node's built-in `process.loadEnvFile()`, resolved from the compiled `dist/main.js`, not from the working directory.
+
+### D25 — Channel contract differs from D05: recipient travels in the alert
+`NotificationChannel.send(alert: MatchedAlert)` with `MatchedAlert = { event, user }` — no separate `target` argument.
+**Why:** Every channel needs the recipient, and the user is the only target type in scope. Channels are instantiated directly in the `useFactory` that feeds `ChannelRegistry`, so a new channel is one class plus one array entry; the registry throws on duplicate ids at startup. Email: nodemailer, `dry-run` when `SMTP_HOST` is empty, SMTP port 587 by default (`secure` only on 465).
+
+### D26 — Scope cut after M2
+**Alternatives:** keep the original 15h plan (M0–M7).
+**Why:** The brief describes a 2–3 hour feature; after about 5 hours only M2 was done, and the plan totalled ~15h. That ratio is itself a planning error, so the remaining work is cut and time-boxed (see the table in `00-plan.md`): the separate test milestone (M5) is dropped because the matcher and planner tests shipped with M2; e2e tests and the RSS stretch (M7) become non-goals; the admin view is limited to the delivery log and event injection. Planned vs actual time is reported in the README.
+
+**Budget note:** M2 was planned at 3h and took about 1h of build time (12:59Z–13:23Z implementation, plus design review), after ~0.5h of prompt preparation.

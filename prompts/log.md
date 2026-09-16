@@ -98,3 +98,100 @@ Amend the last commit with all of the above plus prompts/log.md and prompts/raw.
 Paste git log -1 --stat and the two lines you wrote into rows 5 and 6. Nothing else.
 **Summary (EN):** Fill the measured placeholders in the review and decision logs, add D18, update the commit rule in CLAUDE.md, and amend the docs commit with all of it plus the prompt logs.
 **Outcome:** Ran the checks before writing this entry, out of order. Row 5: -U was already present. Row 6: admin 2/2 (api re-run 1/1). The M5is typo was not in the file. Em dashes are real UTF-8 characters, with no ??? in either file. Budget note: 1.5h (10:42:36Z to 12:25Z). Row 9: cause not established from the hook script. Appended D18, updated the CLAUDE.md commit rule, and amended the docs commit. The D14 bracketed audit claim was left unverified. Not pushed.
+
+## 2026-09-16T12:59:14.352Z — M2 vertical slice
+**Prompt (verbatim):** Milestone M2: vertical slice — one injected event → rule matching → email channel (dry-run capable) → delivery log row. Work on the current branch `feat/m2-vertical-slice`.
+
+## Phase 1 — design and plan, then STOP
+1. Write `docs/02-design.md` (max ~80 lines, English): domain model, the request-to-delivery sequence, the channel abstraction, and one "at larger scale" line per component. Base it on D03–D05 in `docs/03-decision-log.md` and on the decisions below. Do not invent decisions that are not listed here; if something is missing, list it as an open question at the end of the doc.
+2. Present your implementation plan (files, dependencies with exact versions) and stop. Do not install or write code until I approve.
+
+## Decisions (fixed — implement, do not redesign)
+- **Housekeeping first:** remove `vite-tsconfig-paths` from `apps/api` (no tsconfig declares `paths`; see D17) and delete the related comment in `vitest.config.ts`.
+- **Persistence:** TypeORM + Postgres via `@nestjs/typeorm`. The API is ESM (`"type": "module"`): register entities explicitly or via `autoLoadEntities`, never by file glob. `synchronize: true` only when `NODE_ENV !== 'production'`; no migrations in this milestone.
+- **Config:** read `POSTGRES_*` and `SMTP_*` from `process.env`, with the same defaults as `docker-compose.yml`. Load the root `.env` with Node's built-in `process.loadEnvFile()` if the file exists; do not add a config library. Verify which working directory `npm run dev:api` actually uses before choosing the path. You may not read or write `.env` or `.env.example`: list the env vars you need and I will add them.
+- **Entities:**
+  - `User { id uuid, name, email }`
+  - `AlertRule { id uuid, userId, eventTypes: EventType[], minSeverity: 1..5, keywords: string[], channels: string[] }`
+  - `Event { id uuid, type: 'news'|'market'|'disaster', severity: 1..5, title, summary, tags: string[], payload: jsonb, occurredAt }`
+  - `Delivery { id uuid, eventId, userId, ruleId, channel, status: 'sent'|'dry-run'|'failed', error: string|null, createdAt }`
+- **Matching:** a pure function `matchesRule(event, rule): boolean`, no Nest or DB imports. All specified conditions must hold (AND).
+  - An empty `eventTypes` or `keywords` array means "no filter on that field".
+  - Severity passes when `event.severity >= rule.minSeverity`.
+  - **Keywords, case-insensitive, whole-word:** tokenize text with `/[\p{L}\p{N}]+/gu` after lowercasing. A keyword matches the title or summary if its token sequence appears contiguously in the text's tokens (so "interest rate" works and "rate" does not match "corporate"). A keyword matches a tag only if it equals the tag, case-insensitively. A rule matches if ANY of its keywords matches.
+- **Delivery unit:** one delivery per `(eventId, userId, channel)`. If several rules of the same user match with the same channel, send once and record the first matching rule's id. Implement this as a pure function `planDeliveries(event, rules): { userId, ruleId, channel }[]`, with deterministic order.
+- **Pipeline:** synchronous, inside the request. `POST /events` validates → persists the event → loads all rules → `planDeliveries` → sends each planned delivery via the registry → persists one `Delivery` row per planned delivery → returns the event plus its deliveries. A channel id missing from the registry, or a `send()` that throws, produces a `failed` row with the error message; it never fails the request or the other deliveries.
+- **Channel abstraction (D05):**
+  - `NotificationChannel { readonly id: string; send(alert: MatchedAlert): Promise<DeliveryResult> }`, where `MatchedAlert` carries the event and the recipient user.
+  - `ChannelRegistry` receives all channels through one injection token (array, built with `useFactory`), exposes `get(id)`, and throws at startup on duplicate ids.
+  - Adding a channel must mean: one class plus one entry in that factory, nothing else.
+- **Email channel:** `id = 'email'`, using nodemailer.
+  - If `SMTP_HOST` is unset, send nothing, log the rendered message with Nest's `Logger`, and return status `dry-run`.
+  - Otherwise send via SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`) and return `sent`.
+  - Subject: `[<type> · severity <n>] <title>`. Body: plain text with summary, tags and occurredAt.
+- **Validation:** a global `ValidationPipe` (whitelist, forbidNonWhitelisted, transform) and a DTO for `POST /events`. `type` must be one of the enum values, `severity` an integer 1–5, `tags` an optional string array, `occurredAt` optional (default: now).
+- **Read endpoint:** `GET /deliveries` returns the latest 100 deliveries, newest first. No other endpoints in M2.
+- **Seed:** on application bootstrap, only if the users table is empty, insert 2 users and 3 rules. The seed must make one injected sample event produce at least one `dry-run` delivery, and must contain one case where two rules of the same user match with the same channel (to demonstrate the dedup). Put the sample event's curl command in your final report.
+- **Remove** the generated `AppController`/`AppService` hello-world, and its spec, if nothing uses them.
+
+## Dependencies
+Before installing anything, run `npm view <pkg> version peerDependencies --json` for each new package (`@nestjs/typeorm`, `typeorm`, `pg`, `nodemailer`, `@types/nodemailer`, `class-validator`, `class-transformer`). Paste the output and confirm compatibility with Nest 12. No `--legacy-peer-deps`, no `--force`. If a peer conflict appears, stop and report it.
+
+## Tests (vitest, pure functions only)
+`matchesRule`:
+- type mismatch → false; empty `eventTypes` → any type passes
+- severity equal to `minSeverity` → true; one below → false
+- keyword case-insensitive in title; in summary; equal to a tag
+- "rate" does not match "corporate"; "interest rate" matches "Interest Rate hike"
+- accented text: "árvíz" matches "Árvíz a Dunán"
+- empty `keywords` → no keyword filter
+- all conditions must hold together
+
+`planDeliveries`:
+- two rules of one user, same channel → one planned delivery with the first rule's id
+- same user, different channels → two
+- two users → separate deliveries
+- no matching rule → empty
+
+## Out of scope (do not build)
+Slack, admin UI, retries/queues, auth, migrations, rule CRUD, any endpoint not listed above.
+
+## Report when done (paste real output, not summaries)
+1. `npm install` tail and exit code; `npm ls` for each new package
+2. `npm run build -w apps/api` exit code
+3. `npm test -w apps/api` full output
+4. With Postgres up and `npm run dev:api` running:
+   - the curl for the sample event, with response body and status code
+   - `curl localhost:3000/deliveries`
+   - one invalid payload (`severity: 9`) with status code and body
+5. Stop the dev server, then prove it is stopped by pasting `netstat -ano | findstr :3000` (it must be empty)
+6. The list of env vars I need to add to `.env.example`
+7. `git status --short`
+
+Do not commit.
+**Summary (EN):** Phase 1 of M2: write docs/02-design.md from D03–D05 and the fixed decisions, present the implementation plan with checked dependency versions, and stop before installing or coding.
+**Outcome:** Wrote docs/02-design.md (domain model, matching, sequence, channel abstraction, larger-scale notes, 5 open questions). Ran npm view for all 7 packages. Recommended dropping @types/nodemailer because nodemailer 10 ships its own types, and flagged typeorm 1.x API uncertainty. Found that the e2e spec depends on AppController. Presented the plan and stopped; nothing installed or coded.
+
+## 2026-09-16T13:10:43.468Z — M2 vertical slice
+**Prompt (verbatim):** Decisions:
+1. Skip @types/nodemailer — nodemailer 10 ships its own types; I verified the `types` field.
+2. Pin typeorm@0.3.31. Reason: you said you are unsure about the 1.x API, and I want generated code I can check against an API you know. Correction for the record: 1.1.1 was published on 2026-09-01, not today (npm view typeorm time).
+3. Delete test/app.e2e-spec.ts, vitest.config.e2e.ts and the test:e2e script. No tooling that is guaranteed to fail; e2e comes back in M5.
+4. Open questions in docs/02-design.md:
+   - Q1: add `createdAt` to AlertRule; load rules ordered by createdAt, then id. "First matching rule" means that order.
+   - Q2: plain uuid columns, no relations or FKs. Add FK constraints to the "At larger scale" section.
+   - Q3: accepted as proposed.
+   - Q4: accepted; state it in the doc as a known limitation, not as an open question.
+   - Q5: leave it out.
+5. Fix a contradiction in the sequence: "load all AlertRules (+ their Users)" conflicts with "no relations". Load the users in a separate query by the userIds of the planned deliveries.
+6. Seed users use @example.com addresses.
+7. Move resolved questions out of "Open questions" into the relevant sections; keep the "Differs from D05" note.
+
+Update docs/02-design.md accordingly, then proceed with implementation as planned. Report as specified in the original M2 prompt. Do not commit.
+**Summary (EN):** Resolve the M2 plan decisions (no @types/nodemailer, typeorm 0.3.31, remove e2e tooling, answers to the open questions, seed emails), update the design doc, implement the vertical slice and report with real output.
+**Outcome:** Updated docs/02-design.md with the resolved questions (createdAt on AlertRule, users loaded separately, known-limitation note, DTO rules, FK line under larger scale). Removed the hello-world and e2e tooling and vite-tsconfig-paths. Installed pinned deps (typeorm 0.3.31, no @types/nodemailer). Implemented entities, the pure matcher and planner (19 tests pass), the channel registry, email channel, pipeline, GET /deliveries and seed. Build exit 0. Live run: 201 with a dry-run delivery and the dedup to the first rule, 400 for severity 9. The first sample curl sent non-UTF-8 bytes from the Windows shell and stored U+FFFD in the title; re-sent with \u escapes and verified the UTF-8 bytes in Postgres. Dev server stopped, port 3000 empty. Not committed.
+
+## 2026-09-16T13:22:46.387Z — M2 vertical slice
+**Prompt (verbatim):** Approved. I added the env vars to .env.example myself. Commit only the code now (feat commit per CLAUDE.md): everything under apps/, package-lock.json and .env.example — not docs/ or prompts/. Message: "feat: M2 event-to-delivery vertical slice" with a 1–2 sentence body. Then stop. Paste git log --oneline -2 and git status --short.
+**Summary (EN):** Commit the M2 code only (apps/, package-lock.json, .env.example) as a feat: commit with the given subject and a short body, then show the log and status.
+**Outcome:** Staged apps/, package-lock.json and .env.example only, and committed 57e2c3c "feat: M2 event-to-delivery vertical slice" with a two-sentence body. No co-author trailer, per CLAUDE.md. docs/ and prompts/ stay uncommitted. Not pushed.
