@@ -5,7 +5,7 @@ This is a 24h take-home task evaluated on process, not on code. Follow these rul
 ## Prompt logging
 After every user prompt, append an entry to `prompts/log.md` before doing anything else:
 ```
-## <ISO timestamp> — <milestone>
+## <ISO timestamp copied from the matching prompts/raw.md entry> — <milestone>
 **Prompt (verbatim):** <the user's message>
 **Summary (EN):** <one line>
 **Outcome:** <filled in when the turn ends: what was produced, what the user rejected>
