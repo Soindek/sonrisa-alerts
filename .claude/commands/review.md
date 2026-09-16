@@ -15,4 +15,5 @@ You are reviewing code you did not write. Do not edit any file, except appending
    - dead code, duplication, misleading names
 4. Report each finding as one row:
    | # | Severity (blocker/major/minor) | file:line | Finding | Evidence (quote the code) | Suggested fix |
+   `file:line` is the line number in the file at HEAD (check with `grep -n`), not the position in the diff output.
 5. Rules: no style nits a formatter would fix; no speculation without a quoted line; if unsure, mark the row "unverified". If there is nothing to report in a category, say so in one line. End with a one-line verdict: merge / fix first.

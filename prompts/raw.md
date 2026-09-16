@@ -198,3 +198,75 @@ Approved. I added the env vars to .env.example myself. Commit only the code now 
 ## 2026-09-16T15:56:40.521Z
 
 Save your report above verbatim to docs/reviews/m2-pre-review.md (create the folder). Change nothing else.
+
+## 2026-09-16T16:02:47.343Z
+
+Milestone M3: Slack channel + fixes from the M2 pre-review. Work on the current branch `feat/m3-slack-channel`. Leave the uncommitted files in docs/, prompts/ and .claude/commands/ untouched, except docs/02-design.md as stated below.
+
+The plan below is pre-approved: write your 3–6 line plan into the prompts/log.md entry (timestamp from prompts/raw.md) and proceed without waiting. Stop and wait only if a new dependency would be needed, a build or test fails and you cannot fix it within this scope, or something here contradicts docs/02-design.md.
+
+## Fixes (findings from docs/reviews/m2-pre-review.md, triaged by me)
+1. #1 `AlertPipelineService`: a failing delivery-row save must not stop the loop or fail the request. Catch it per delivery, log it with Nest's Logger (event id, user id, channel, error), continue; the response contains the rows that were saved.
+2. #3 `config.ts`: use `||` instead of `??` for every value, so an empty env var falls back to the default like docker-compose does.
+3. #6 `docs/02-design.md`: change the unknown-channel error text to match the code (`Unknown channel: <id>`).
+4. Unicode: in `tokenize`, apply `.normalize('NFC')` before lowercasing (keywords go through the same function).
+5. `lint` script in apps/api/package.json: remove the deleted `test/` folder.
+
+## Slack channel
+- `SlackChannel`, `id = 'slack'`, one more entry in the existing channels factory. Nothing else in the pipeline may change — if something must, stop and tell me why.
+- One incoming webhook from env `SLACK_WEBHOOK_URL`, read in config.ts like the others (workspace-level channel, assumption A7). The text names the recipient, because the webhook is not per-user.
+- Empty or unset URL → return `dry-run`, log the text with Logger.
+- Otherwise POST JSON `{ text }` with Node's built-in `fetch` and `AbortSignal.timeout(5000)`. 2xx → `sent`; non-2xx → throw an error containing the status code and response body.
+- Text: `*[<type> · severity <n>]* <title>`, then summary, tags, occurredAt, `For: <name> <email>`.
+- Constructor takes its config like `EmailChannel`, so it is testable without env.
+
+## Seed
+Bence's rule R3 gets `channels: ['email', 'slack']`. Reset the dev DB first with `docker compose down -v && docker compose up -d` (dev data only, approved).
+
+## Tests (vitest, no DB)
+- #2 `AlertPipelineService` with in-memory fake repositories and a real `ChannelRegistry`:
+  - one working and one throwing channel → both rows saved, statuses `dry-run` and `failed`, error message stored
+  - unknown channel id → `failed` row with `Unknown channel: <id>`
+  - missing user → `failed` row
+  - a row save that throws for one delivery → the other delivery is still sent and saved, the call resolves
+- #4 `planDeliveries`: an earlier rule of the same user/channel that does not match, a later one that does → the later rule's id; one rule with `['email','slack']` → two entries.
+- #5 `ChannelRegistry`: get registered, unknown → undefined, duplicate ids throw. `EmailChannel`: no host → `dry-run` and the logged text contains the subject in the specified format.
+- `SlackChannel` with stubbed global `fetch`: no URL → `dry-run`, fetch not called; 200 → `sent`, body contains title and recipient email; 500 → throws with the status code.
+- NFC: decomposed "a\u0301rvi\u0301z" in a title matches keyword "árvíz".
+
+## docs/02-design.md
+Besides fix 3: add Slack to the channel section; in "At larger scale" add per-user Slack delivery via a Slack app (`chat.postMessage` + user id). No other docs.
+
+## Report (real output)
+1. `npm run lint -w apps/api`, `npm run build -w apps/api`, `npm test -w apps/api` — output and exit codes
+2. With Postgres up and `npm run dev:api` running, no SLACK_WEBHOOK_URL set:
+   - market event curl (ASCII-safe, \u escapes) matching R3 ("interest rate") → response with two dry-run rows (email + slack)
+   - the Slack dry-run log line
+   - `curl localhost:3000/deliveries`
+3. Stop the dev server, wait for TIME_WAIT to clear, paste `netstat -ano | findstr :3000` (empty)
+4. `git status --short`
+
+Do not commit. Do not push.
+
+## 2026-09-16T16:17:22.767Z
+
+/review main
+
+## 2026-09-16T16:18:56.068Z
+
+Save your report above verbatim to docs/reviews/m3-pre-review.md. Change nothing else except your prompts/log.md entry.
+
+## 2026-09-16T16:21:46.105Z
+
+Fix the findings in docs/reviews/m3-pre-review.md — all six are accepted. Work on feat/m3-slack-channel. Pre-approved; stop only if a build or test fails and you cannot fix it within this scope.
+
+1. match-rule.ts: NFC-normalize and lowercase tags and keywords before the tag comparison (reuse one helper with tokenize). Test: a decomposed tag "a\u0301rvi\u0301z" matches keyword "árvíz".
+2. slack.channel.ts: escape `&` → `&amp;`, `<` → `&lt;`, `>` → `&gt;` in every interpolated value (title, summary, tags, name, email) — not in the `*[...]*` markup you add yourself. Test: a title `<!channel> & <https://x|y>` appears escaped in the posted body.
+3. slack.channel.spec.ts: a stubbed fetch that rejects → `send` rejects; the fetch init has a `signal`.
+4. New config.spec.ts: with `vi.stubEnv` set to empty strings, `postgresConfig()`, `smtpConfig()` and `slackConfig()` return their defaults (empty `SLACK_WEBHOOK_URL` → undefined). Restore env after each test.
+5. alert-pipeline.service.spec.ts: the missing-user test asserts `error: 'Recipient user not found'`.
+6. docs/02-design.md, configuration section: add `SLACK_WEBHOOK_URL` (no default; empty means dry-run). No other doc edits.
+
+Then run lint, build and test for apps/api and paste output with exit codes. Commit only apps/ with:
+`fix: M3 pre-review findings` and body "Normalizes tags to NFC, escapes Slack control characters in event text, and adds tests for fetch failure, empty-env defaults and the missing-user error, as found by the M3 pre-review."
+Paste `git log --oneline -3` and `git status --short`. Do not push.

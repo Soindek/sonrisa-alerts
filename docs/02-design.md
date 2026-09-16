@@ -33,7 +33,7 @@ POST /events
   → load the Users whose ids appear in the plan (separate query)
   → for each planned delivery:
        channel = registry.get(channel)
-         missing  → status failed, error "unknown channel"
+         missing  → status failed, error "Unknown channel: <id>"
        channel.send({ event, user })   (MatchedAlert = event + user only)
          returns  → status from DeliveryResult (sent | dry-run)
          throws   → status failed, error = message
@@ -56,10 +56,11 @@ interface NotificationChannel { readonly id: string; send(alert: MatchedAlert): 
 - Adding a channel = one class + one entry in the factory. The pipeline, matcher and entities stay unchanged.
 - Differs from D05: `send` has no separate `target` argument; the recipient travels inside `MatchedAlert` as the `User`.
 - **Email (`id = 'email'`, nodemailer):** subject `[<type> · severity <n>] <title>`, plain-text body with summary, tags and occurredAt. If `SMTP_HOST` is unset, nothing is sent: the rendered message is logged with Nest's `Logger` and the channel returns `dry-run`. Otherwise it sends via SMTP (`SMTP_HOST/PORT/USER/PASS/FROM`) and returns `sent`.
+- **Slack (`id = 'slack'`, incoming webhook):** one workspace-level webhook from `SLACK_WEBHOOK_URL` (assumption A7), so the text names the recipient: `*[<type> · severity <n>]* <title>`, then summary, tags, occurredAt and `For: <name> <email>`. If the URL is empty or unset, the text is logged with `Logger` and the channel returns `dry-run`. Otherwise it POSTs `{ text }` as JSON with Node's built-in `fetch` and a 5 s timeout; 2xx returns `sent`, anything else throws with the status code and response body.
 
 ## Configuration and bootstrap
 
-- `POSTGRES_*` and `SMTP_*` come from `process.env`, with the same defaults as `docker-compose.yml`. The root `.env` is loaded with `process.loadEnvFile()` if the file exists; there is no config library.
+- `POSTGRES_*` and `SMTP_*` come from `process.env`, with the same defaults as `docker-compose.yml`. `SLACK_WEBHOOK_URL` has no default; empty or unset means Slack runs in dry-run. The root `.env` is loaded with `process.loadEnvFile()` if the file exists; there is no config library.
 - TypeORM registers entities explicitly or via `autoLoadEntities`, never by glob (the API is ESM). `synchronize` is on only when `NODE_ENV !== 'production'`. No migrations.
 - Seed on bootstrap, only when `users` is empty: 2 users and 3 rules, including one same-user/same-channel overlap to demonstrate the dedup. Seed users use `@example.com` addresses.
 
@@ -70,6 +71,7 @@ interface NotificationChannel { readonly id: string; send(alert: MatchedAlert): 
 - **Dedup:** a unique constraint on `(eventId, userId, channel)` instead of relying only on the planner.
 - **Integrity:** FK constraints from `AlertRule.userId` and `Delivery.eventId/userId/ruleId` to their tables.
 - **Channels:** per-channel queues with retries, backoff and rate limits; send and log row are written idempotently.
+- **Slack per user:** a Slack app instead of the shared webhook, posting with `chat.postMessage` to each recipient's Slack user id (stored on `User`).
 - **Delivery log:** paginated, filterable reads; partitioning or retention by `createdAt`.
 - **Config:** a validated config schema, with secrets from a secret manager instead of `.env`.
 
