@@ -1,0 +1,17 @@
+{
+  "name": "sonrisa-alerts",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "engines": {
+    "node": "^22.22.3 || ^24.15.0 || ^26.0.0"
+  },
+  "overrides": {
+    "vitest": "4.1.11"
+  },
+  "scripts": {
+    "dev:api": "npm run start:dev -w apps/api",
+    "dev:admin": "npm start -w apps/admin"
+  }
+}

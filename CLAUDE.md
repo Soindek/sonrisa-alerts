@@ -13,7 +13,7 @@ After every user prompt, append an entry to `prompts/log.md` before doing anythi
 Never skip this, never rewrite earlier entries.
 
 ## Git
-- Never work on `main`. If the current branch is `main`, stop and ask the user to create or name a feature branch before touching any file. This applies even if the user forgot to mention a branch.
+- Never work on `main`. If the current branch is `main`, create a feature branch yourself before touching any file, name it from the task at hand, and tell me the name in one line. Do not ask first.
 - Branch naming: `feat/m<N>-<short-name>` (e.g. `feat/m1-skeleton`).
 - Never push. Never merge. Never open a PR. The user reviews every diff, pushes and merges by hand.
 - Commit only when the user explicitly says "commit". Never commit on your own.
