@@ -1,0 +1,60 @@
+<div class="toolbar">
+  <h2>Alert rules</h2>
+  <button mat-stroked-button type="button" (click)="refresh()" [disabled]="loading()">Refresh</button>
+</div>
+
+@if (loadError(); as message) {
+  <p class="load-error">{{ message }}</p>
+}
+
+@if (deleteErrors().length > 0) {
+  <ul class="delete-errors">
+    @for (error of deleteErrors(); track $index) {
+      <li>{{ error }}</li>
+    }
+  </ul>
+}
+
+@for (user of users(); track user.id) {
+  <div class="user">
+    <h3>{{ user.name }} <span class="email">{{ user.email }}</span></h3>
+    @if (user.rules.length > 0) {
+      <table class="rules">
+        <thead>
+          <tr>
+            <th>Types</th>
+            <th>Min severity</th>
+            <th>Keywords</th>
+            <th>Channels</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (rule of user.rules; track rule.id) {
+            <tr>
+              <td class="types">{{ rule.eventTypes.length > 0 ? rule.eventTypes.join(', ') : 'any' }}</td>
+              <td class="severity">{{ rule.minSeverity }}</td>
+              <td class="keywords">{{ rule.keywords.length > 0 ? rule.keywords.join(', ') : '—' }}</td>
+              <td class="channels">{{ rule.channels.join(', ') }}</td>
+              <td class="actions">
+                <button
+                  mat-button
+                  type="button"
+                  [disabled]="deletingId() !== null"
+                  (click)="deleteRule(rule.id)"
+                >
+                  Delete
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    } @else {
+      <p class="no-rules">No rules.</p>
+    }
+  </div>
+}
+
+<h3>New rule</h3>
+<app-create-rule-form [users]="users()" (created)="refresh()" />

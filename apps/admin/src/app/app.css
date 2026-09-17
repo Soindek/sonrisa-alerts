@@ -4,6 +4,7 @@ main {
   padding: 24px;
 }
 
-section {
-  margin-top: 32px;
+.description {
+  margin: 16px 0;
+  color: rgba(0, 0, 0, 0.6);
 }

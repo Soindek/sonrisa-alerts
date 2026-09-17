@@ -1,0 +1,48 @@
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.row {
+  display: flex;
+  gap: 16px;
+}
+
+.row mat-form-field {
+  flex: 1;
+}
+
+.full {
+  width: 100%;
+}
+
+.channels {
+  border: none;
+  margin: 8px 0;
+  padding: 0;
+}
+
+.channels legend {
+  font-size: 14px;
+  padding: 0;
+}
+
+button {
+  align-self: flex-start;
+}
+
+.field-error,
+.errors {
+  color: #b3261e;
+  margin: 4px 0 0;
+}
+
+.errors {
+  margin-top: 12px;
+}
+
+.success {
+  color: #1b6e3a;
+  margin: 12px 0 0;
+}

@@ -1,0 +1,36 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.email {
+  color: #5f6368;
+  font-size: 14px;
+  font-weight: normal;
+}
+
+.rules {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.rules th,
+.rules td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.rules .actions {
+  text-align: right;
+}
+
+.no-rules {
+  color: #5f6368;
+}
+
+.load-error,
+.delete-errors {
+  color: #b3261e;
+}

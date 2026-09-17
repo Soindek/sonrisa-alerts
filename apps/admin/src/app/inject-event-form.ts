@@ -1,30 +1,14 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, output, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import {
-  type AbstractControl,
-  NonNullableFormBuilder,
-  ReactiveFormsModule,
-  type ValidationErrors,
-  Validators,
-} from '@angular/forms';
+import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { AlertsApi, EVENT_TYPES, type EventType } from './alerts-api';
-
-export function wholeNumber(control: AbstractControl): ValidationErrors | null {
-  const value: unknown = control.value;
-  return value === null || value === '' || Number.isInteger(value) ? null : { wholeNumber: true };
-}
-
-export function parseTags(value: string): string[] {
-  return value
-    .split(',')
-    .map((tag) => tag.trim())
-    .filter((tag) => tag.length > 0);
-}
+import { errorMessages } from './error-messages';
+import { parseCommaList, wholeNumber } from './form-utils';
 
 @Component({
   selector: 'app-inject-event-form',
@@ -69,7 +53,7 @@ export class InjectEventForm {
     this.submitting.set(true);
     this.clearMessages();
 
-    this.api.injectEvent({ type: type as EventType, severity, title, summary, tags: parseTags(tags) }).subscribe({
+    this.api.injectEvent({ type: type as EventType, severity, title, summary, tags: parseCommaList(tags) }).subscribe({
       next: (response) => {
         this.submitting.set(false);
         this.createdCount.set(response.deliveries.length);
@@ -86,15 +70,4 @@ export class InjectEventForm {
     this.errors.set([]);
     this.createdCount.set(null);
   }
-}
-
-function errorMessages(err: HttpErrorResponse): string[] {
-  const message: unknown = err.status === 400 ? (err.error as { message?: unknown } | null)?.message : undefined;
-  if (Array.isArray(message)) {
-    return message.map(String);
-  }
-  if (typeof message === 'string') {
-    return [message];
-  }
-  return [`Request failed (${err.status || 'network error'})`];
 }

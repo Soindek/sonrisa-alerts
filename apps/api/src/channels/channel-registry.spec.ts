@@ -19,6 +19,12 @@ describe('ChannelRegistry', () => {
     expect(registry.get('sms')).toBeUndefined();
   });
 
+  it('lists the registered ids in registration order', () => {
+    const registry = new ChannelRegistry([channel('slack'), channel('email')]);
+
+    expect(registry.ids()).toEqual(['slack', 'email']);
+  });
+
   it('throws on duplicate ids', () => {
     expect(() => new ChannelRegistry([channel('email'), channel('email')])).toThrow(
       'Duplicate notification channel id: email',

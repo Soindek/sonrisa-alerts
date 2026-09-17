@@ -1,12 +1,20 @@
 <main>
   <h1>Sonrisa alerts admin</h1>
 
-  <section>
-    <h2>Inject event</h2>
-    <app-inject-event-form (created)="log.refresh()" />
-  </section>
+  <mat-tab-group dynamicHeight>
+    <mat-tab label="Events">
+      <ng-template matTabContent>
+        <p class="description">Inject a test event and watch what gets delivered.</p>
+        <app-inject-event-form (created)="log.refresh()" />
+        <app-delivery-log-table #log />
+      </ng-template>
+    </mat-tab>
 
-  <section>
-    <app-delivery-log-table #log />
-  </section>
+    <mat-tab label="Rules">
+      <ng-template matTabContent>
+        <p class="description">Who gets notified about what, and where.</p>
+        <app-rules-panel />
+      </ng-template>
+    </mat-tab>
+  </mat-tab-group>
 </main>

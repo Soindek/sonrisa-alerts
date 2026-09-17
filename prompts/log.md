@@ -354,3 +354,96 @@ Commit only apps/ as `fix: M4 pre-review and manual test findings` with body: "S
 Do not start dev servers. Paste git log --oneline -3 and git status --short. Do not push.
 **Summary (EN):** Fix accepted M4 pre-review findings #1–#5 and manual-test defects (plural text, stale messages, warn log on failed send), add table and form tests, describe the enriched deliveries response and admin page in the design doc, run checks, and commit apps/ as a fix: commit.
 **Outcome:** Fixed all eight code items: switchMap refresh stream for the table, whole-number validator with its mat-error, singular/plural result text, messages cleared on value change and on invalid submit, Logger.warn on failed send (existing failure test asserts it), router removed. Added delivery-log-table.spec.ts (5 tests, including cancellation of an in-flight load) and 8 form tests; admin 19 tests, api 42. My first template used @if (createdCount(); as count), which would hide the 0 deliveries message; I caught it before running tests and switched to a null check. A shell heredoc also stripped a template literal from the spec, which failed the build once; fixed by direct edit. Mutation check: reverting switchMap, the value-change clearing and the whole-number validator each made its test fail. Added two lines to docs/02-design.md for the enriched response and the admin page. Lint, build and test exit 0 for both apps (admin build still warns 553.84 kB over the 500 kB budget). Committed apps/ only as d491756 without a co-author trailer; not pushed. No dev servers started.
+
+## 2026-09-16T20:31:44.061Z — M7 alert rule management
+**Prompt (verbatim):** Milestone M7: alert rule management — the brief's "users set up alerts" was only covered by seed data. Work on the current branch `feat/m7-rules`.
+
+The plan below is pre-approved: write your 3–6 line plan into the prompts/log.md entry (timestamp copied from prompts/raw.md) and proceed. Stop and wait only if a new dependency is needed, a build or test fails and you cannot fix it within this scope, or something contradicts docs/02-design.md.
+
+## Backend (apps/api)
+- `GET /api/channels` → the registered channel ids from ChannelRegistry (add a `ids()` method). This is what the UI offers, so a new channel appears without UI changes.
+- `GET /api/users` → users with their rules (rules ordered by createdAt, id), two queries, no relations (D23).
+- `POST /api/rules` with a DTO: userId (uuid, must exist → 404 otherwise), eventTypes (array of the enum, may be empty), minSeverity (int 1–5), keywords (string array, trimmed, empty entries dropped, may be empty), channels (non-empty array; every id must be registered → 400 listing the unknown ids). Returns 201 with the rule.
+- `DELETE /api/rules/:id` (uuid) → 204, 404 if missing.
+- Unit tests: registry ids; rule creation validation (unknown user, unknown channel, keyword cleanup); delete 404.
+- docs/02-design.md: add the three endpoints in two lines. No other doc edits.
+
+## Frontend (apps/admin)
+- `RulesPanel` on the same page, between the inject form and the delivery log: each user with their rules (types or "any", min severity, keywords or "—", channels) and a Delete button per rule.
+- A create-rule form: user (select), event types (multi-select, empty = any), min severity (1–5, whole number), keywords (comma-separated), channels (checkboxes from GET /api/channels, at least one). Show 400/404 messages; refresh the panel after create/delete.
+- Same patterns as the existing components (signals, OnPush, reactive forms, Material, switchMap for refreshes).
+- Tests: AlertsApi new calls; form validation (no channel, severity 2.5), keyword splitting, error message rendering; panel renders "any"/"—" and calls delete.
+
+## Report (real output)
+1. lint, build, test for both apps — exit codes and test counts
+2. With Postgres and both dev servers running: curl `GET /api/channels`, `GET /api/users`, create a rule for Bence (types [news], min 1, keywords ["election"], channels ["slack"]), a 400 with channel "sms", a POST event {"type":"news","severity":2,"title":"Election results announced","summary":"Turnout was high."} → one slack dry-run for Bence, then delete the rule (204) and repeat the event → no delivery.
+3. Stop both dev servers by killing the whole process trees; prove it with `netstat -ano | findstr ":3000 :4200"` AND a process listing showing no node process whose command line contains dev:api, dev:admin, nest start or ng serve.
+4. `git status --short`
+
+Do not commit. Do not push. I will test the UI myself.
+**Summary (EN):** Add alert rule management: GET /api/channels, GET /api/users with rules, POST /api/rules and DELETE /api/rules/:id with validation and tests, a RulesPanel with a create form on the admin page, then run checks and a live curl walkthrough.
+**Plan:**
+1. ChannelRegistry.ids(); a RulesController (GET channels, GET users, POST rules, DELETE rules/:id) with a CreateRuleDto; keyword cleanup and user/channel checks in the controller, rules loaded in a second query (D23).
+2. API unit tests for registry ids, create validation (unknown user, unknown channel, keyword cleanup) and delete 404; two lines in docs/02-design.md.
+3. AlertsApi gains listChannels, listUsers, createRule, deleteRule; a RulesPanel component (user list with rules and Delete) containing a CreateRuleForm (select, multi-select, severity, keywords, channel checkboxes), both OnPush with signals and a switchMap refresh stream.
+4. Place the panel between the inject form and the delivery log; admin specs for the API calls, form validation, keyword splitting, error rendering and panel rendering/delete.
+5. Run lint/build/test for both apps, then the curl walkthrough with Postgres and dev servers, stop the process trees and prove it.
+**Outcome:** Added GET /api/channels (ChannelRegistry.ids()), GET /api/users (users with rules, two queries), POST /api/rules (DTO validation, keyword trimming, 400 listing unknown channels, 404 for unknown user) and DELETE /api/rules/:id (204/404), with unit tests for registry ids, DTO validation, create, delete and user grouping (api 55 tests). Added a RulesPanel with a CreateRuleForm between the inject form and the delivery log, moved errorMessages into a shared file that also reads 404 messages, and added API, form and panel specs (admin 36 tests). Two lines in docs/02-design.md. Lint, build and test exit 0 for the api; admin build and test exit 0 (bundle budget warning, 593.48 kB), and admin has no lint script. Mistake: my first mutation-check script ran git checkout inside apps/admin/src/app and reverted my tracked admin edits, and its backup path was wrong, so create-rule-form.ts kept two mutations; I restored all files by hand, reran the tests (36 passed), then redid the mutation checks with scratchpad backups and no git. Every mutation made a test fail (4 in admin, 3 in api). Live run: channels, users, 201 create for Bence, 400 "Unknown channels: sms", one slack dry-run delivery, 204 delete (then 404), and the repeated event gave no deliveries. Both dev servers were stopped with taskkill /T; no listeners and no node processes remained. Not committed.
+
+## 2026-09-16T21:04:21.889Z — M7 follow-up: admin tabs
+**Prompt (verbatim):** M7 follow-up from my manual UI test: the single admin page mixes two jobs and is hard to read. Split it into two tabs. Work on the current branch `feat/m7-rules`.
+
+Pre-approved; write your 3–6 line plan into the prompts/log.md entry (timestamp copied from prompts/raw.md) and proceed. Stop only if a build or test fails and you cannot fix it within this scope. Do not run any git command that changes the working tree (see CLAUDE.md).
+
+## Change (apps/admin only)
+- `App` uses `mat-tab-group` (MatTabsModule, already installed; no router, no new dependency — D29) with two tabs:
+  1. **Events** — the inject-event form, then the delivery log (the form's `created` output still refreshes the log).
+  2. **Rules** — the rules panel with the new-rule form.
+- Tab bodies are lazy (`<ng-template matTabContent>`) so each tab reloads its data when it is opened; do not add any cross-tab refresh code.
+- Keep the page title. Give each tab a short description line under the tab header ("Inject a test event and watch what gets delivered." / "Who gets notified about what, and where.").
+- Remove now-redundant wrappers and spacing; keep the existing components unchanged unless the move requires it.
+- Update app.spec.ts: both tab labels render; the Events tab shows the inject form and the delivery log; after selecting the Rules tab, the rules panel is shown.
+
+## Report (real output)
+1. `npm run build -w apps/admin` (exit code, bundle size) and `npm test -w apps/admin -- --watch=false` (exit code, test count)
+2. `git diff --stat`
+Do not start dev servers — I will test the UI myself. Do not commit.
+**Summary (EN):** Split the admin page into Events and Rules tabs with lazy mat-tab bodies and description lines, update app.spec.ts, then report build, test and diff stat.
+**Plan:**
+1. App imports MatTabsModule; app.html becomes the title plus a mat-tab-group with Events and Rules tabs, each body in an ng-template matTabContent.
+2. Events tab: description line, inject form (created refreshes the log), delivery log; Rules tab: description line, rules panel.
+3. Drop the section wrappers and their spacing from app.css, keep a small tab-body padding and description style.
+4. app.spec.ts: title, both tab labels, Events content, and rules panel after selecting the Rules tab.
+5. Run admin build and test, then git diff --stat.
+**Outcome:** App now shows the title and a mat-tab-group with Events (description, inject form, delivery log refreshed by created) and Rules (description, rules panel) tabs, both lazy via matTabContent; the section wrappers and their spacing are gone and no other component changed. app.spec.ts checks the title, both tab labels, the Events tab content with no rules panel, and the rules panel after clicking the Rules tab. The first spec version failed because the lazy tab body only attaches after a 100 ms fallback timer that whenStable does not wait for, and the tab test harness did not help either; the spec now provides MATERIAL_ANIMATIONS with animationsDisabled. Admin test exit 0 (39 tests), build exit 0 with the existing budget warning (initial 645.97 kB). Not committed.
+
+## 2026-09-17T04:09:48.131Z — M7
+**Prompt (verbatim):** /review main
+**Summary (EN):** Read-only pre-screen review of the feat/m7-rules diff against main, reported as a findings table with a verdict.
+**Outcome:** Read-only review of main...HEAD (apps/ diff, 3 commits); no blockers or majors, 7 minor findings (punctuation-only keywords saved but never matching, duplicate channel ids, no size caps on rule arrays, untested controller wiring and channel-load error, untested log refresh after the tab move, form helpers imported from inject-event-form). Verdict: merge. No files edited besides this entry, nothing committed.
+
+## 2026-09-17T04:11:11.024Z — M7
+**Prompt (verbatim):** Save your report above verbatim to docs/reviews/m7-pre-review.md. Change nothing else except your prompts/log.md entry.
+**Summary (EN):** Save the M7 pre-review report verbatim to docs/reviews/m7-pre-review.md.
+**Outcome:** Wrote the M7 pre-review report verbatim to docs/reviews/m7-pre-review.md; no other file changed besides this entry, nothing committed.
+
+## 2026-09-17T04:13:36.562Z — M7
+**Prompt (verbatim):** Fix the M7 findings. Work on feat/m7-rules. Pre-approved; stop only if a build or test fails and you cannot fix it within this scope. Do not run git commands that change the working tree (CLAUDE.md).
+
+From docs/reviews/m7-pre-review.md (all accepted except #4, which is deferred under D26):
+1. #1 POST /api/rules: after trimming, a keyword with no letter or digit (/[\p{L}\p{N}]/u) is rejected with 400 "Keywords need at least one letter or digit: <list>". Empty entries are still dropped silently. Spec case.
+2. #2 Save channels deduplicated, keeping first-seen order. Spec case.
+3. #3 CreateRuleDto: keywords ArrayMaxSize(20), each MaxLength(100); channels ArrayMaxSize(10), each MaxLength(50). DTO spec cases for both limits.
+4. #5 create-rule-form.spec.ts: /api/channels returns 500 → the "Could not load channels" message is shown.
+5. #6 app.spec.ts: an event created from the Events tab triggers a second GET /api/deliveries.
+6. #7 Move `parseTags` (rename to `parseCommaList`) and `wholeNumber` from inject-event-form.ts to a new `form-utils.ts`; update both forms and their specs.
+
+From my manual UI test (docs/04-ai-review-log.md row 28):
+7. After "Rule created." the reset form shows "User is required": reset through the FormGroupDirective (`resetForm()` with the initial values) so the form leaves the submitted state. Test: after a successful create, no mat-error is rendered.
+8. The Rules tab shows a second, inner scrollbar. Make the tab bodies grow with their content so only the page scrolls (e.g. `dynamicHeight` on the tab group or a CSS fix scoped to the app). Say which one you chose and why.
+
+Then run lint/build/test for api and build/test for admin; paste exit codes, test counts and the admin bundle size.
+Commit only apps/ as `fix: M7 pre-review and manual test findings` with body: "Rejects keywords without letters or digits, deduplicates channels, limits rule sizes, moves form helpers to form-utils, resets the rule form through its directive, removes the inner tab scrollbar, and adds the missing tests, as found by the M7 pre-review and a manual UI run."
+Do not start dev servers. Paste git log --oneline -3 and git status --short. Do not push.
+**Summary (EN):** Fix the accepted M7 pre-review findings and the two manual UI defects, run api lint/build/test and admin build/test, and commit apps/ as a fix: commit.
+**Outcome:** POST /api/rules now rejects trimmed keywords without a letter or digit (400 listing them) and saves channels deduplicated in first-seen order; CreateRuleDto caps keywords at 20 x 100 chars and channels at 10 x 50 chars, with spec cases for both limits. parseTags became parseCommaList and moved with wholeNumber to form-utils.ts; new specs cover the channel-load error and the delivery log reload after an event is created. The rule form now resets through FormGroupDirective.resetForm() (the non-nullable controls restore their initial values without passing them); its new no-mat-error spec failed on the old code first. The inner scrollbar is fixed with dynamicHeight on mat-tab-group, the built-in option, instead of overriding Material CSS. api lint/build/test exit 0 (62 tests), admin build exit 0 (initial 646.10 kB, existing budget warning), admin test exit 0 (42 tests). Committed apps/ as e848182; docs and prompts left uncommitted, not pushed.

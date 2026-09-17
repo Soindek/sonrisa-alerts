@@ -17,4 +17,9 @@ export class ChannelRegistry {
   get(id: string): NotificationChannel | undefined {
     return this.channels.get(id);
   }
+
+  /** Registered ids in registration order. */
+  ids(): string[] {
+    return [...this.channels.keys()];
+  }
 }

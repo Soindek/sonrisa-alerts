@@ -1,7 +1,8 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
-import { InjectEventForm, parseTags } from './inject-event-form';
+import { parseCommaList } from './form-utils';
+import { InjectEventForm } from './inject-event-form';
 
 describe('InjectEventForm', () => {
   let fixture: ComponentFixture<InjectEventForm>;
@@ -68,7 +69,7 @@ describe('InjectEventForm', () => {
   });
 
   it('splits the tags string, trims entries and drops empty ones', async () => {
-    expect(parseTags(' flood , ,budapest,, ')).toEqual(['flood', 'budapest']);
+    expect(parseCommaList(' flood , ,budapest,, ')).toEqual(['flood', 'budapest']);
 
     fill({ tags: ' flood , ,budapest,, ' });
     await clickSubmit();

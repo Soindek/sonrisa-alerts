@@ -37,6 +37,7 @@ Consequences for how I work:
 | ~~M5~~ | ~~Tests on matcher + delivery orchestration.~~ Dropped: shipped with M2 (D26). | — | — |
 | M6 | README (setup, demo, time spent), process artifacts consolidated. | ~~2h~~ **1h** | see README |
 | ~~M7~~ | ~~Stretch: RSS event source.~~ Dropped: non-goal (D26). | — | — |
+| M7 | Rule management (API + admin panel), added after re-checking the work against the brief (D31). | 1h | ~1.25h incl. tabs and review fixes |
 
 **Re-plan after M2 (D26):** actual time for M0–M2 was ~5h against a task the recruiter described in the screening call as usually taking 2–3 hours, and the original plan totalled ~15h. The remaining scope is cut and time-boxed rather than extended. The original rows are kept struck through so the change stays visible.
 
