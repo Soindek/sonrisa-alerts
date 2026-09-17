@@ -43,6 +43,8 @@ POST /api/events
 A failed delivery never fails the request or the other deliveries. `GET /api/deliveries` returns the latest 100 rows, newest first.
 Each row also carries `event: { title, type, severity } | null` and `user: { name, email } | null`, loaded with two `In(...)` queries (D23); `null` means the referenced row is missing.
 The admin page (`apps/admin`, one Angular page) has a form that POSTs to `/api/events` and a delivery log table over `GET /api/deliveries`, which refreshes after each inject or on demand.
+Rule management (M7): `GET /api/channels` returns `ChannelRegistry.ids()`; `GET /api/users` returns each user with `rules` ordered by `createdAt, id` (two queries, D23).
+`POST /api/rules` validates the rule DTO, trims keywords and drops empty ones, returns 400 listing unregistered channel ids and 404 for an unknown user; `DELETE /api/rules/:id` returns 204 or 404.
 
 **Known limitation:** the event and the delivery rows are not in one transaction. If a row write fails after a successful send, that send goes unrecorded. Accepted for M2.
 

@@ -15,6 +15,7 @@ Never skip this, never rewrite earlier entries.
 ## Git
 - Never work on `main`. If the current branch is `main`, create a feature branch yourself before touching any file, name it from the task at hand, and tell me the name in one line. Do not ask first.
 - Branch naming: `feat/m<N>-<short-name>` (e.g. `feat/m1-skeleton`).
+- Never run `git checkout`, `git restore`, `git reset`, `git clean` or `git stash`: the working tree belongs to the user. For experiments such as breaking code to check that a test fails, copy files to your scratchpad and restore them from there.
 - Never push. Never merge. Never open a PR. The user reviews every diff, pushes and merges by hand.
 - Commit only when the user explicitly says "commit". Never commit on your own.
 - One `feat:` commit per milestone. `docs/` and `prompts/` go in a separate `docs:` commit at milestone end; prompt-log lines written after that commit land in the next milestone's `docs:` commit.

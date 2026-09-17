@@ -355,3 +355,71 @@ Docs:
 Then run lint, build and test for both apps (`npm run lint -w apps/api`, `npm run build -w apps/api`, `npm test -w apps/api`, `npm run build -w apps/admin`, `npm test -w apps/admin -- --watch=false`) and paste output with exit codes and test counts.
 Commit only apps/ as `fix: M4 pre-review and manual test findings` with body: "Serializes table refreshes with switchMap, adds a whole-number check and singular/plural result text, clears stale form messages, logs failed sends, removes the unused router, and adds table and form tests, as found by the M4 pre-review and a manual UI run."
 Do not start dev servers. Paste git log --oneline -3 and git status --short. Do not push.
+
+## 2026-09-16T20:31:44.061Z
+
+Milestone M7: alert rule management — the brief's "users set up alerts" was only covered by seed data. Work on the current branch `feat/m7-rules`.
+
+The plan below is pre-approved: write your 3–6 line plan into the prompts/log.md entry (timestamp copied from prompts/raw.md) and proceed. Stop and wait only if a new dependency is needed, a build or test fails and you cannot fix it within this scope, or something contradicts docs/02-design.md.
+
+## Backend (apps/api)
+- `GET /api/channels` → the registered channel ids from ChannelRegistry (add a `ids()` method). This is what the UI offers, so a new channel appears without UI changes.
+- `GET /api/users` → users with their rules (rules ordered by createdAt, id), two queries, no relations (D23).
+- `POST /api/rules` with a DTO: userId (uuid, must exist → 404 otherwise), eventTypes (array of the enum, may be empty), minSeverity (int 1–5), keywords (string array, trimmed, empty entries dropped, may be empty), channels (non-empty array; every id must be registered → 400 listing the unknown ids). Returns 201 with the rule.
+- `DELETE /api/rules/:id` (uuid) → 204, 404 if missing.
+- Unit tests: registry ids; rule creation validation (unknown user, unknown channel, keyword cleanup); delete 404.
+- docs/02-design.md: add the three endpoints in two lines. No other doc edits.
+
+## Frontend (apps/admin)
+- `RulesPanel` on the same page, between the inject form and the delivery log: each user with their rules (types or "any", min severity, keywords or "—", channels) and a Delete button per rule.
+- A create-rule form: user (select), event types (multi-select, empty = any), min severity (1–5, whole number), keywords (comma-separated), channels (checkboxes from GET /api/channels, at least one). Show 400/404 messages; refresh the panel after create/delete.
+- Same patterns as the existing components (signals, OnPush, reactive forms, Material, switchMap for refreshes).
+- Tests: AlertsApi new calls; form validation (no channel, severity 2.5), keyword splitting, error message rendering; panel renders "any"/"—" and calls delete.
+
+## Report (real output)
+1. lint, build, test for both apps — exit codes and test counts
+2. With Postgres and both dev servers running: curl `GET /api/channels`, `GET /api/users`, create a rule for Bence (types [news], min 1, keywords ["election"], channels ["slack"]), a 400 with channel "sms", a POST event {"type":"news","severity":2,"title":"Election results announced","summary":"Turnout was high."} → one slack dry-run for Bence, then delete the rule (204) and repeat the event → no delivery.
+3. Stop both dev servers by killing the whole process trees; prove it with `netstat -ano | findstr ":3000 :4200"` AND a process listing showing no node process whose command line contains dev:api, dev:admin, nest start or ng serve.
+4. `git status --short`
+
+Do not commit. Do not push. I will test the UI myself.
+
+## 2026-09-16T20:43:37.241Z
+
+<task-notification>
+<task-id>bdty8fr04</task-id>
+<tool-use-id>toolu_01CeYkNWWqo5BNrWmfyiDdJk</tool-use-id>
+<output-file>C:\Users\Gigabyte\AppData\Local\Temp\claude\d--dev-vibecode-sonrisa-alerts\2cdc1f8f-1fd7-4bc3-b12a-99389498a784\tasks\bdty8fr04.output</output-file>
+<status>failed</status>
+<summary>Background command "Start API dev server in background" failed with exit code 1</summary>
+</task-notification>
+
+## 2026-09-16T20:43:37.449Z
+
+<task-notification>
+<task-id>b0nfzfrqq</task-id>
+<tool-use-id>toolu_01RdiSbzBYX1XxTbP2UD3Tfv</tool-use-id>
+<output-file>C:\Users\Gigabyte\AppData\Local\Temp\claude\d--dev-vibecode-sonrisa-alerts\2cdc1f8f-1fd7-4bc3-b12a-99389498a784\tasks\b0nfzfrqq.output</output-file>
+<status>failed</status>
+<summary>Background command "Start admin dev server in background" failed with exit code 1</summary>
+</task-notification>
+
+## 2026-09-16T21:04:21.889Z
+
+M7 follow-up from my manual UI test: the single admin page mixes two jobs and is hard to read. Split it into two tabs. Work on the current branch `feat/m7-rules`.
+
+Pre-approved; write your 3–6 line plan into the prompts/log.md entry (timestamp copied from prompts/raw.md) and proceed. Stop only if a build or test fails and you cannot fix it within this scope. Do not run any git command that changes the working tree (see CLAUDE.md).
+
+## Change (apps/admin only)
+- `App` uses `mat-tab-group` (MatTabsModule, already installed; no router, no new dependency — D29) with two tabs:
+  1. **Events** — the inject-event form, then the delivery log (the form's `created` output still refreshes the log).
+  2. **Rules** — the rules panel with the new-rule form.
+- Tab bodies are lazy (`<ng-template matTabContent>`) so each tab reloads its data when it is opened; do not add any cross-tab refresh code.
+- Keep the page title. Give each tab a short description line under the tab header ("Inject a test event and watch what gets delivered." / "Who gets notified about what, and where.").
+- Remove now-redundant wrappers and spacing; keep the existing components unchanged unless the move requires it.
+- Update app.spec.ts: both tab labels render; the Events tab shows the inject form and the delivery log; after selecting the Rules tab, the rules panel is shown.
+
+## Report (real output)
+1. `npm run build -w apps/admin` (exit code, bundle size) and `npm test -w apps/admin -- --watch=false` (exit code, test count)
+2. `git diff --stat`
+Do not start dev servers — I will test the UI myself. Do not commit.

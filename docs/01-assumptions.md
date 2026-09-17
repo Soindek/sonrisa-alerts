@@ -13,6 +13,7 @@ Things the brief does not say. Each one is a decision I made so that work could 
 ## Data / integration
 
 - **A6.** Events are produced by an `EventSource` abstraction. In this submission the source is **simulated** (seed data + manual injection). No live news/market/disaster API is integrated.
+  *Correction after M6 (D31):* the `EventSource` interface was never built. Events enter only through `POST /api/events`; that endpoint is where a source would plug in.
 - **A7.** Email delivery runs in **dry-run** mode unless SMTP env vars are set. Slack uses an incoming webhook URL from env; without it, dry-run.
 - **A8.** Dry-run deliveries are still written to the delivery log with status `dry-run`, so the pipeline is observable without external credentials.
 
@@ -25,5 +26,5 @@ Things the brief does not say. Each one is a decision I made so that work could 
 | Rate limiting / digest mode | Per-user delivery counter, batch into digest job |
 | End-user alert management UI | Angular feature module over the existing rules API |
 | Auth / roles for admin | Guard on the admin routes; out of scope for 24h |
-| Real external event providers | Additional `EventSource` implementations |
+| Real external event providers | An `EventSource` interface (not built, D31) whose implementations poll or receive events and call the same pipeline as `POST /api/events` |
 | End-to-end / HTTP tests | Nest testing module + supertest against a throwaway Postgres (dropped in D26; logic is unit-tested) |

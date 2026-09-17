@@ -137,3 +137,10 @@ A versioned slash command, `.claude/commands/review.md`, reviews the branch diff
 - **Close every prompt with process hygiene.** Whole process tree killed, ports and process list checked, timestamps copied from the hook log — all learned the hard way (review log rows 11, 18, 23).
 - **Write docs once per milestone.** Several correction passes over the M1 logs cost more than the milestone itself.
 - **At larger scale** the design notes in `02-design.md` apply: queue-based intake, SQL pre-filtering, FK constraints, retries per channel, a Slack app per user, migrations instead of `synchronize`, auth on the admin surface, and e2e tests against a throwaway database.
+
+### D31 — Re-check against the brief: rule management added, EventSource claim corrected
+After M6 I compared the finished work with the task text line by line.
+- **Rule management was missing.** The brief's first sentence is "users … set up alerts", but rules existed only as seed data, although A4, A5 and D06 describe rules managed via API and listed in the admin view. M7 adds `GET /api/users` (with rules), `POST /api/rules`, `DELETE /api/rules/:id`, `GET /api/channels` and a rules panel in the admin page. End-user auth and a separate end-user UI stay out of scope (A4): the admin panel stands in for "users set up alerts".
+- **`EventSource` was never built.** D02 and A6 describe an interface with a seed/inject implementation; the code has only `POST /api/events`. With RSS dropped (D26) a single implementation would have been decorative, so it is not added now. D02 stays as written (this log is append-only); A6 carries a correction note.
+**Alternatives:** document rule management as a non-goal; add an `EventSource` interface with one manual implementation.
+**Why:** Rules are the core of the brief, so leaving them seed-only would miss the one thing the PM asked for first. An interface with one caller proves nothing, so the honest fix there is the documentation.
