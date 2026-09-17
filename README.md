@@ -88,11 +88,12 @@ prompts/     every prompt sent to Claude Code: raw.md (verbatim, by hook), log.m
 1. `docs/00-plan.md` — how I read the brief, milestones, the re-plan after M2
 2. `docs/scoping-notes.md` — the pre-build scoping session: what the AI proposed, what I overrode
 3. `docs/01-assumptions.md` — what the brief left open, and the non-goals with "how it would be added"
-4. `docs/03-decision-log.md` — D01–D31, each with the rejected alternative
+4. `docs/03-decision-log.md` — D01–D32, each with the rejected alternative
 5. `docs/04-ai-review-log.md` — every meaningful AI output, how I checked it, the verdict; recurring failure patterns at the end
-6. `docs/reviews/` — AI pre-review reports (M2 retroactive, M3, M4, M7) and the fresh-clone README test (M6)
-7. `docs/screenshots/` — the admin view during the M7 manual test
-8. `prompts/` and `CLAUDE.md` — what Claude Code was told, and the rules it worked under (start with `prompts/README.md`). Documentation drafted by the second assistant (a desktop chat that reviewed Claude Code's output) was written straight into the repo and has no prompt-log entry — see "How I use the AI" in `docs/00-plan.md` and the digest in `prompts/planning-chat-summary.md`.
+6. `docs/05-retrospective.md` — what I would do differently, and what I would add with more time
+7. `docs/reviews/` — AI pre-review reports (M2 retroactive, M3, M4, M7) and the fresh-clone README test (M6)
+8. `docs/screenshots/` — the admin view during the M7 manual test
+9. `prompts/` and `CLAUDE.md` — what Claude Code was told, and the rules it worked under (start with `prompts/README.md`). Documentation drafted by the second assistant (a desktop chat that reviewed Claude Code's output) was written straight into the repo and has no prompt-log entry — see "How I use the AI" in `docs/00-plan.md` and the digest in `prompts/planning-chat-summary.md`.
 
 **Working loop per milestone:** I decide scope and design (in a separate chat, recorded in the decision log) → a pre-approved prompt to Claude Code → it reports real command output → `feat:` commit → `/review main` in a fresh session (`.claude/commands/review.md`, D27) → I triage every finding → manual run of the app → `fix:` commit → `docs:` commit → PR, merged by me. The AI never pushes or merges; `main` is branch-protected.
 
@@ -111,7 +112,7 @@ prompts/     every prompt sent to Claude Code: raw.md (verbatim, by hook), log.m
 
 Hands-on total: about 7.5h up to M4 (10:15–19:38 minus the 15:30–17:30 break), about 11h including M6 and M7.
 
-The original plan totalled ~15h for a brief that describes a short feature. That ratio was a planning error; after M2 the scope was cut and time-boxed (D26). The largest single cost was M1's dependency crash; the largest avoidable cost was polishing documentation in several passes instead of once per milestone.
+The task asks to plan for 24 hours; the first plan (~15h) fit that window, but it split the work into more milestones than the feature needed, so after M2 the scope was cut and time-boxed (D26, D32). Writing the code took roughly the 2–3 hours mentioned in the screening call; most of the time went into documentation, reviews and checks, which is what the task evaluates. The largest single cost was M1's dependency crash; the largest avoidable cost was polishing documentation in several passes instead of once per milestone. Full retrospective: `docs/05-retrospective.md`.
 
 ## Known limitations
 

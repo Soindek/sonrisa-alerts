@@ -144,3 +144,6 @@ After M6 I compared the finished work with the task text line by line.
 - **`EventSource` was never built.** D02 and A6 describe an interface with a seed/inject implementation; the code has only `POST /api/events`. With RSS dropped (D26) a single implementation would have been decorative, so it is not added now. D02 stays as written (this log is append-only); A6 carries a correction note.
 **Alternatives:** document rule management as a non-goal; add an `EventSource` interface with one manual implementation.
 **Why:** Rules are the core of the brief, so leaving them seed-only would miss the one thing the PM asked for first. An interface with one caller proves nothing, so the honest fix there is the documentation.
+
+### D32 — Correction to D26 and D30 on the time estimate
+The "2–3 hours" in D26 and D30 was a remark in the screening call, not part of the brief, which says to plan for 24 hours — and it may well have referred to the coding alone. The ~15h plan fit that window. The cut in D26 still stands as a scope decision, but it corrected the number of milestones, not an overrun: the code took about 2–3 hours, and the rest of the ~11 hours went into documentation, reviews and verification. The full retrospective, including what I would add with more time, is in `docs/05-retrospective.md`.
