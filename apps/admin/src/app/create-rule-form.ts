@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, output, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormGroupDirective, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -9,7 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { AlertsApi, EVENT_TYPES, type EventType, type UserWithRules } from './alerts-api';
 import { errorMessages } from './error-messages';
-import { parseTags, wholeNumber } from './inject-event-form';
+import { parseCommaList, wholeNumber } from './form-utils';
 
 @Component({
   selector: 'app-create-rule-form',
@@ -30,6 +30,8 @@ export class CreateRuleForm {
 
   readonly users = input.required<UserWithRules[]>();
   readonly created = output<void>();
+
+  private readonly formDirective = viewChild.required(FormGroupDirective);
 
   protected readonly eventTypes = EVENT_TYPES;
   protected readonly channelIds = signal<string[]>([]);
@@ -83,10 +85,12 @@ export class CreateRuleForm {
     this.submitting.set(true);
     this.clearMessages();
 
-    this.api.createRule({ userId, eventTypes, minSeverity, keywords: parseTags(keywords), channels }).subscribe({
+    this.api.createRule({ userId, eventTypes, minSeverity, keywords: parseCommaList(keywords), channels }).subscribe({
       next: () => {
         this.submitting.set(false);
-        this.form.reset();
+        // Through the directive, so the form also leaves the submitted state and shows no errors;
+        // the non-nullable controls go back to their initial values.
+        this.formDirective().resetForm();
         this.success.set(true);
         this.created.emit();
       },

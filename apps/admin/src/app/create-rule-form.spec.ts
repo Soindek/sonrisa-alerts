@@ -58,6 +58,21 @@ describe('CreateRuleForm', () => {
     expect(texts('mat-checkbox')).toEqual(['email', 'slack']);
   });
 
+  it('says so when the channels cannot be loaded', async () => {
+    const failing = TestBed.createComponent(CreateRuleForm);
+    failing.componentRef.setInput('users', users);
+    await failing.whenStable();
+
+    http.expectOne('/api/channels').flush('boom', { status: 500, statusText: 'Server Error' });
+    await failing.whenStable();
+
+    const native = failing.nativeElement as HTMLElement;
+    expect([...native.querySelectorAll('.field-error')].map((node) => node.textContent?.trim())).toEqual([
+      'Could not load channels',
+    ]);
+    expect(native.querySelectorAll('mat-checkbox')).toHaveLength(0);
+  });
+
   it('does not submit without a channel and says so', async () => {
     fill({ channels: [] });
 
@@ -118,6 +133,17 @@ describe('CreateRuleForm', () => {
     expect(texts('.success')).toEqual(['Rule created.']);
     expect(fixture.componentInstance.form.controls.userId.value).toBe('');
     expect(created).toHaveBeenCalledOnce();
+  });
+
+  it('shows no validation errors on the form reset after a successful create', async () => {
+    fill();
+
+    await clickSubmit();
+    http.expectOne('/api/rules').flush({ id: 'r1' });
+    await fixture.whenStable();
+
+    expect(texts('.success')).toEqual(['Rule created.']);
+    expect(element().querySelectorAll('mat-error')).toHaveLength(0);
   });
 
   it('renders the message of a 400 response', async () => {

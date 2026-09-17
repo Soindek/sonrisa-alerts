@@ -31,6 +31,12 @@ export class RulesController {
     if (unknown.length > 0) {
       throw new BadRequestException(`Unknown channels: ${unknown.join(', ')}`);
     }
+    const keywords = dto.keywords.map((keyword) => keyword.trim()).filter((keyword) => keyword.length > 0);
+    // The matcher tokenizes on letters and digits, so a keyword without any would never match a title or summary.
+    const unmatchable = keywords.filter((keyword) => !/[\p{L}\p{N}]/u.test(keyword));
+    if (unmatchable.length > 0) {
+      throw new BadRequestException(`Keywords need at least one letter or digit: ${unmatchable.join(', ')}`);
+    }
     if (!(await this.users.existsBy({ id: dto.userId }))) {
       throw new NotFoundException(`User not found: ${dto.userId}`);
     }
@@ -40,8 +46,8 @@ export class RulesController {
         userId: dto.userId,
         eventTypes: dto.eventTypes,
         minSeverity: dto.minSeverity,
-        keywords: dto.keywords.map((keyword) => keyword.trim()).filter((keyword) => keyword.length > 0),
-        channels: dto.channels,
+        keywords,
+        channels: [...new Set(dto.channels)],
       }),
     );
   }

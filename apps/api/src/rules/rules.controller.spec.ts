@@ -36,12 +36,25 @@ describe('CreateRuleDto', () => {
     expect(await validate(plainToInstance(CreateRuleDto, dto({ eventTypes: [], keywords: [] })))).toEqual([]);
   });
 
+  it('accepts keywords and channels at their size limits', async () => {
+    const atLimits = dto({
+      keywords: Array.from({ length: 20 }, () => 'a'.repeat(100)),
+      channels: Array.from({ length: 10 }, () => 'c'.repeat(50)),
+    });
+
+    expect(await validate(plainToInstance(CreateRuleDto, atLimits))).toEqual([]);
+  });
+
   it.each([
     ['a non-uuid userId', { userId: 'bence' }, 'userId'],
     ['an unknown event type', { eventTypes: ['sports'] }, 'eventTypes'],
     ['a fractional severity', { minSeverity: 2.5 }, 'minSeverity'],
     ['a severity above 5', { minSeverity: 6 }, 'minSeverity'],
     ['an empty channel list', { channels: [] }, 'channels'],
+    ['more than 20 keywords', { keywords: Array.from({ length: 21 }, (_, i) => `k${i}`) }, 'keywords'],
+    ['a keyword longer than 100 characters', { keywords: ['a'.repeat(101)] }, 'keywords'],
+    ['more than 10 channels', { channels: Array.from({ length: 11 }, (_, i) => `c${i}`) }, 'channels'],
+    ['a channel id longer than 50 characters', { channels: ['c'.repeat(51)] }, 'channels'],
   ])('rejects %s', async (_, overrides, property) => {
     const errors = await validate(plainToInstance(CreateRuleDto, dto(overrides as Partial<CreateRuleDto>)));
 
@@ -63,6 +76,24 @@ describe('RulesController', () => {
       channels: ['slack'],
     });
     expect(rule).toMatchObject({ id: 'r1', keywords: ['election', 'interest rate'] });
+  });
+
+  it('rejects keywords without a letter or digit with 400, listing each one', async () => {
+    const { controller, save } = setup();
+
+    const result = controller.create(dto({ keywords: ['election', ' !!! ', '', '--', 'Ár 5%'] }));
+
+    await expect(result).rejects.toThrow(BadRequestException);
+    await expect(result).rejects.toThrow('Keywords need at least one letter or digit: !!!, --');
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it('saves channels deduplicated in first-seen order', async () => {
+    const { controller, save } = setup();
+
+    await controller.create(dto({ channels: ['slack', 'email', 'slack', 'email'] }));
+
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ channels: ['slack', 'email'] }));
   });
 
   it('rejects unknown channels with 400, listing every unknown id', async () => {
