@@ -92,7 +92,7 @@ prompts/     every prompt sent to Claude Code: raw.md (verbatim, by hook), log.m
 5. `docs/04-ai-review-log.md` — every meaningful AI output, how I checked it, the verdict; recurring failure patterns at the end
 6. `docs/reviews/` — AI pre-review reports (M2 retroactive, M3, M4, M7) and the fresh-clone README test (M6)
 7. `docs/screenshots/` — the admin view during the M7 manual test
-8. `prompts/` and `CLAUDE.md` — what Claude Code was told, and the rules it worked under. Documentation drafted by the second assistant (a desktop chat that reviewed Claude Code's output) was written straight into the repo and has no prompt-log entry — see "How I use the AI" in `docs/00-plan.md`.
+8. `prompts/` and `CLAUDE.md` — what Claude Code was told, and the rules it worked under (start with `prompts/README.md`). Documentation drafted by the second assistant (a desktop chat that reviewed Claude Code's output) was written straight into the repo and has no prompt-log entry — see "How I use the AI" in `docs/00-plan.md` and the digest in `prompts/planning-chat-summary.md`.
 
 **Working loop per milestone:** I decide scope and design (in a separate chat, recorded in the decision log) → a pre-approved prompt to Claude Code → it reports real command output → `feat:` commit → `/review main` in a fresh session (`.claude/commands/review.md`, D27) → I triage every finding → manual run of the app → `fix:` commit → `docs:` commit → PR, merged by me. The AI never pushes or merges; `main` is branch-protected.
 
