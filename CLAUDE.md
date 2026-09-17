@@ -18,7 +18,7 @@ Never skip this, never rewrite earlier entries.
 - Never run `git checkout`, `git restore`, `git reset`, `git clean` or `git stash`: the working tree belongs to the user. For experiments such as breaking code to check that a test fails, copy files to your scratchpad and restore them from there.
 - Never push. Never merge. Never open a PR. The user reviews every diff, pushes and merges by hand.
 - Commit only when the user explicitly says "commit". Never commit on your own.
-- One `feat:` commit per milestone. `docs/` and `prompts/` go in a separate `docs:` commit at milestone end; prompt-log lines written after that commit land in the next milestone's `docs:` commit.
+- One `feat:` commit per milestone. Fixes found by the pre-review or a manual test go in a separate `fix:` commit after it. `docs/` and `prompts/` go in a separate `docs:` commit at milestone end; prompt-log lines written after that commit land in the next milestone's `docs:` commit.
 - Format: `<type>: <summary, max 60 chars>` then a blank line, then a body of 1–3 plain sentences: what changed and, if applicable, what generated output was rejected or rewritten and why.
 - No bullet lists, no emoji, no "This commit…" boilerplate, no co-author trailers.
 
