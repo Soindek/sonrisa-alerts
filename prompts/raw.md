@@ -423,3 +423,31 @@ Pre-approved; write your 3–6 line plan into the prompts/log.md entry (timestam
 1. `npm run build -w apps/admin` (exit code, bundle size) and `npm test -w apps/admin -- --watch=false` (exit code, test count)
 2. `git diff --stat`
 Do not start dev servers — I will test the UI myself. Do not commit.
+
+## 2026-09-17T04:09:48.131Z
+
+/review main
+
+## 2026-09-17T04:11:11.024Z
+
+Save your report above verbatim to docs/reviews/m7-pre-review.md. Change nothing else except your prompts/log.md entry.
+
+## 2026-09-17T04:13:36.562Z
+
+Fix the M7 findings. Work on feat/m7-rules. Pre-approved; stop only if a build or test fails and you cannot fix it within this scope. Do not run git commands that change the working tree (CLAUDE.md).
+
+From docs/reviews/m7-pre-review.md (all accepted except #4, which is deferred under D26):
+1. #1 POST /api/rules: after trimming, a keyword with no letter or digit (/[\p{L}\p{N}]/u) is rejected with 400 "Keywords need at least one letter or digit: <list>". Empty entries are still dropped silently. Spec case.
+2. #2 Save channels deduplicated, keeping first-seen order. Spec case.
+3. #3 CreateRuleDto: keywords ArrayMaxSize(20), each MaxLength(100); channels ArrayMaxSize(10), each MaxLength(50). DTO spec cases for both limits.
+4. #5 create-rule-form.spec.ts: /api/channels returns 500 → the "Could not load channels" message is shown.
+5. #6 app.spec.ts: an event created from the Events tab triggers a second GET /api/deliveries.
+6. #7 Move `parseTags` (rename to `parseCommaList`) and `wholeNumber` from inject-event-form.ts to a new `form-utils.ts`; update both forms and their specs.
+
+From my manual UI test (docs/04-ai-review-log.md row 28):
+7. After "Rule created." the reset form shows "User is required": reset through the FormGroupDirective (`resetForm()` with the initial values) so the form leaves the submitted state. Test: after a successful create, no mat-error is rendered.
+8. The Rules tab shows a second, inner scrollbar. Make the tab bodies grow with their content so only the page scrolls (e.g. `dynamicHeight` on the tab group or a CSS fix scoped to the app). Say which one you chose and why.
+
+Then run lint/build/test for api and build/test for admin; paste exit codes, test counts and the admin bundle size.
+Commit only apps/ as `fix: M7 pre-review and manual test findings` with body: "Rejects keywords without letters or digits, deduplicates channels, limits rule sizes, moves form helpers to form-utils, resets the rule form through its directive, removes the inner tab scrollbar, and adds the missing tests, as found by the M7 pre-review and a manual UI run."
+Do not start dev servers. Paste git log --oneline -3 and git status --short. Do not push.

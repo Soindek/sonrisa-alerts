@@ -36,7 +36,9 @@ The seed creates these rules. A rule matches when all its conditions hold; an em
 | R2 | Anna Kovács | any | 4 | — | email |
 | R3 | Bence Tóth | market | 2 | interest rate | email, slack |
 
-Inject these from the admin page (every field except Tags is required; Tags is comma-separated), or send the matching file from `demo/` with curl:
+The admin page has two tabs. **Rules** lists each user's rules, deletes them and creates new ones (channels are offered from the API, so a newly registered channel appears without UI changes). **Events** injects an event and shows the delivery log.
+
+Inject these on the Events tab (every field except Tags is required; Tags is comma-separated), or send the matching file from `demo/` with curl:
 
 | # | Type | Sev | Title | Summary | Tags | Result | Shows |
 |---|---|---|---|---|---|---|---|
@@ -52,6 +54,8 @@ curl -s localhost:3000/api/deliveries
 
 The files are pure ASCII (`\u` escapes for Hungarian letters), so the text arrives intact from any Windows shell; typing accented text into a curl command line may not. Only one rule id per delivery is visible; that R1 and R2 both matched in case 2 is what the dedup unit tests in `apps/api/src/matching/plan-deliveries.spec.ts` cover — the visible part is that Anna gets one email, not two.
 
+**Rule round trip (D31):** on the Rules tab create a rule for Bence — type news, min severity 1, keyword `election`, channel slack. On the Events tab inject news / 2 / "Election results announced" → one Slack delivery to Bence. Delete the rule and inject the same event again → no delivery.
+
 **Failure isolation (D22):**
 
 1. Stop the API (Ctrl+C in its terminal).
@@ -66,13 +70,13 @@ The files are pure ASCII (`\u` escapes for Hungarian letters), so the text arriv
 
 ## How it works
 
-`POST /api/events` validates and stores the event, loads all rules, plans deliveries with two pure functions (`matchesRule`, `planDeliveries`), sends each one through the channel registry and stores one delivery row per user and channel — all inside the request. A failing channel produces a `failed` row, never a failed request. `GET /api/deliveries` returns the latest 100 rows with event and user details. Details and "at larger scale" notes: `docs/02-design.md`.
+`POST /api/events` validates and stores the event, loads all rules, plans deliveries with two pure functions (`matchesRule`, `planDeliveries`), sends each one through the channel registry and stores one delivery row per user and channel — all inside the request. A failing channel produces a `failed` row, never a failed request. `GET /api/deliveries` returns the latest 100 rows with event and user details. Rules are managed with `GET /api/users` (users with their rules), `POST /api/rules` (validated: known user, registered channels, keywords with at least one letter or digit, size limits) and `DELETE /api/rules/:id`; `GET /api/channels` lists the registered channels. Details and "at larger scale" notes: `docs/02-design.md`.
 
 **Adding a channel** is one class implementing `NotificationChannel` (`id` + `send(alert)`) and one entry in the factory in `apps/api/src/channels/channels.module.ts`. The pipeline, matcher and entities do not change — Slack was added this way in M3.
 
 ```
 apps/api     NestJS 12, TypeORM 0.3, Postgres — events, rules, matching, channels, delivery log
-apps/admin   Angular 22, Material — inject-event form + delivery log table
+apps/admin   Angular 22, Material — Events tab (inject form + delivery log), Rules tab (rules + new-rule form)
 demo/        request bodies for the demo cases
 docs/        plan, assumptions, design, decisions, AI review log, review reports
 prompts/     every prompt sent to Claude Code: raw.md (verbatim, by hook), log.md (summary + outcome)
@@ -84,10 +88,11 @@ prompts/     every prompt sent to Claude Code: raw.md (verbatim, by hook), log.m
 1. `docs/00-plan.md` — how I read the brief, milestones, the re-plan after M2
 2. `docs/scoping-notes.md` — the pre-build scoping session: what the AI proposed, what I overrode
 3. `docs/01-assumptions.md` — what the brief left open, and the non-goals with "how it would be added"
-4. `docs/03-decision-log.md` — D01–D30, each with the rejected alternative
+4. `docs/03-decision-log.md` — D01–D31, each with the rejected alternative
 5. `docs/04-ai-review-log.md` — every meaningful AI output, how I checked it, the verdict; recurring failure patterns at the end
-6. `docs/reviews/` — AI pre-review reports (M2 retroactive, M3, M4)
-7. `prompts/` and `CLAUDE.md` — what Claude Code was told, and the rules it worked under. Documentation drafted by the second assistant (a desktop chat that reviewed Claude Code's output) was written straight into the repo and has no prompt-log entry — see "How I use the AI" in `docs/00-plan.md`.
+6. `docs/reviews/` — AI pre-review reports (M2 retroactive, M3, M4, M7) and the fresh-clone README test (M6)
+7. `docs/screenshots/` — the admin view during the M7 manual test
+8. `prompts/` and `CLAUDE.md` — what Claude Code was told, and the rules it worked under. Documentation drafted by the second assistant (a desktop chat that reviewed Claude Code's output) was written straight into the repo and has no prompt-log entry — see "How I use the AI" in `docs/00-plan.md`.
 
 **Working loop per milestone:** I decide scope and design (in a separate chat, recorded in the decision log) → a pre-approved prompt to Claude Code → it reports real command output → `feat:` commit → `/review main` in a fresh session (`.claude/commands/review.md`, D27) → I triage every finding → manual run of the app → `fix:` commit → `docs:` commit → PR, merged by me. The AI never pushes or merges; `main` is branch-protected.
 
@@ -101,9 +106,10 @@ prompts/     every prompt sent to Claude Code: raw.md (verbatim, by hook), log.m
 | AI pre-review loop (D27) | — | 17:46–18:01 |
 | M3 Slack + review fixes | 45 min | 18:01–18:41, ~40 min incl. manual run |
 | M4 admin view + review fixes | 1.5h | 18:41–19:38, ~1h incl. manual UI test |
-| M6 README, patterns, retro | 1h | from 19:40 |
+| M6 README, patterns, retro, fresh-clone test | 1h | 19:40–21:36, ~2h |
+| M7 rule management (after re-checking the brief) | 1h | 22:30–23:05, then (next morning) 05:40–06:20 manual test, tabs and review fixes; ~1.25h |
 
-Hands-on total up to M4: about 7.5h (10:15–19:38 minus the 15:30–17:30 break).
+Hands-on total: about 7.5h up to M4 (10:15–19:38 minus the 15:30–17:30 break), about 11h including M6 and M7.
 
 The original plan totalled ~15h for a brief that describes a short feature. That ratio was a planning error; after M2 the scope was cut and time-boxed (D26). The largest single cost was M1's dependency crash; the largest avoidable cost was polishing documentation in several passes instead of once per milestone.
 
@@ -115,4 +121,5 @@ The original plan totalled ~15h for a brief that describes a short feature. That
 - Event and delivery rows are not written in one transaction (D22).
 - Slack uses one shared webhook, so the message names the recipient (D28).
 - TypeORM `synchronize` instead of migrations; schema sync can print a `pg` deprecation warning at startup, typically once the tables exist (D23, D24).
-- Unit tests only (api 42, admin 19); no end-to-end tests (D26). The admin bundle is ~554 kB against a 500 kB warning budget (D29).
+- Unit tests only (api 62, admin 42); no end-to-end or HTTP-level tests through Nest's pipes (D26, M7 pre-review #4). The admin bundle is ~646 kB against a 500 kB warning budget (D29).
+- Rules are managed by the operator in the admin view; there is no end-user login or self-service UI (A4, D31).

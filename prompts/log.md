@@ -416,3 +416,34 @@ Do not start dev servers — I will test the UI myself. Do not commit.
 4. app.spec.ts: title, both tab labels, Events content, and rules panel after selecting the Rules tab.
 5. Run admin build and test, then git diff --stat.
 **Outcome:** App now shows the title and a mat-tab-group with Events (description, inject form, delivery log refreshed by created) and Rules (description, rules panel) tabs, both lazy via matTabContent; the section wrappers and their spacing are gone and no other component changed. app.spec.ts checks the title, both tab labels, the Events tab content with no rules panel, and the rules panel after clicking the Rules tab. The first spec version failed because the lazy tab body only attaches after a 100 ms fallback timer that whenStable does not wait for, and the tab test harness did not help either; the spec now provides MATERIAL_ANIMATIONS with animationsDisabled. Admin test exit 0 (39 tests), build exit 0 with the existing budget warning (initial 645.97 kB). Not committed.
+
+## 2026-09-17T04:09:48.131Z — M7
+**Prompt (verbatim):** /review main
+**Summary (EN):** Read-only pre-screen review of the feat/m7-rules diff against main, reported as a findings table with a verdict.
+**Outcome:** Read-only review of main...HEAD (apps/ diff, 3 commits); no blockers or majors, 7 minor findings (punctuation-only keywords saved but never matching, duplicate channel ids, no size caps on rule arrays, untested controller wiring and channel-load error, untested log refresh after the tab move, form helpers imported from inject-event-form). Verdict: merge. No files edited besides this entry, nothing committed.
+
+## 2026-09-17T04:11:11.024Z — M7
+**Prompt (verbatim):** Save your report above verbatim to docs/reviews/m7-pre-review.md. Change nothing else except your prompts/log.md entry.
+**Summary (EN):** Save the M7 pre-review report verbatim to docs/reviews/m7-pre-review.md.
+**Outcome:** Wrote the M7 pre-review report verbatim to docs/reviews/m7-pre-review.md; no other file changed besides this entry, nothing committed.
+
+## 2026-09-17T04:13:36.562Z — M7
+**Prompt (verbatim):** Fix the M7 findings. Work on feat/m7-rules. Pre-approved; stop only if a build or test fails and you cannot fix it within this scope. Do not run git commands that change the working tree (CLAUDE.md).
+
+From docs/reviews/m7-pre-review.md (all accepted except #4, which is deferred under D26):
+1. #1 POST /api/rules: after trimming, a keyword with no letter or digit (/[\p{L}\p{N}]/u) is rejected with 400 "Keywords need at least one letter or digit: <list>". Empty entries are still dropped silently. Spec case.
+2. #2 Save channels deduplicated, keeping first-seen order. Spec case.
+3. #3 CreateRuleDto: keywords ArrayMaxSize(20), each MaxLength(100); channels ArrayMaxSize(10), each MaxLength(50). DTO spec cases for both limits.
+4. #5 create-rule-form.spec.ts: /api/channels returns 500 → the "Could not load channels" message is shown.
+5. #6 app.spec.ts: an event created from the Events tab triggers a second GET /api/deliveries.
+6. #7 Move `parseTags` (rename to `parseCommaList`) and `wholeNumber` from inject-event-form.ts to a new `form-utils.ts`; update both forms and their specs.
+
+From my manual UI test (docs/04-ai-review-log.md row 28):
+7. After "Rule created." the reset form shows "User is required": reset through the FormGroupDirective (`resetForm()` with the initial values) so the form leaves the submitted state. Test: after a successful create, no mat-error is rendered.
+8. The Rules tab shows a second, inner scrollbar. Make the tab bodies grow with their content so only the page scrolls (e.g. `dynamicHeight` on the tab group or a CSS fix scoped to the app). Say which one you chose and why.
+
+Then run lint/build/test for api and build/test for admin; paste exit codes, test counts and the admin bundle size.
+Commit only apps/ as `fix: M7 pre-review and manual test findings` with body: "Rejects keywords without letters or digits, deduplicates channels, limits rule sizes, moves form helpers to form-utils, resets the rule form through its directive, removes the inner tab scrollbar, and adds the missing tests, as found by the M7 pre-review and a manual UI run."
+Do not start dev servers. Paste git log --oneline -3 and git status --short. Do not push.
+**Summary (EN):** Fix the accepted M7 pre-review findings and the two manual UI defects, run api lint/build/test and admin build/test, and commit apps/ as a fix: commit.
+**Outcome:** POST /api/rules now rejects trimmed keywords without a letter or digit (400 listing them) and saves channels deduplicated in first-seen order; CreateRuleDto caps keywords at 20 x 100 chars and channels at 10 x 50 chars, with spec cases for both limits. parseTags became parseCommaList and moved with wholeNumber to form-utils.ts; new specs cover the channel-load error and the delivery log reload after an event is created. The rule form now resets through FormGroupDirective.resetForm() (the non-nullable controls restore their initial values without passing them); its new no-mat-error spec failed on the old code first. The inner scrollbar is fixed with dynamicHeight on mat-tab-group, the built-in option, instead of overriding Material CSS. api lint/build/test exit 0 (62 tests), admin build exit 0 (initial 646.10 kB, existing budget warning), admin test exit 0 (42 tests). Committed apps/ as e848182; docs and prompts left uncommitted, not pushed.
