@@ -1,4 +1,4 @@
-# 02 — Design (M2 vertical slice)
+# 02 — Design (written for the M2 vertical slice, extended through M7)
 
 Scope: one injected event → rule matching → email channel (dry-run capable) → delivery log row. Based on D03–D05 and the M2 decisions.
 
@@ -42,7 +42,7 @@ POST /api/events
 ```
 A failed delivery never fails the request or the other deliveries. `GET /api/deliveries` returns the latest 100 rows, newest first.
 Each row also carries `event: { title, type, severity } | null` and `user: { name, email } | null`, loaded with two `In(...)` queries (D23); `null` means the referenced row is missing.
-The admin page (`apps/admin`, one Angular page) has a form that POSTs to `/api/events` and a delivery log table over `GET /api/deliveries`, which refreshes after each inject or on demand.
+The admin page (`apps/admin`, one Angular page with two lazy Material tabs, no router) has an **Events** tab — a form that POSTs to `/api/events` and a delivery log table over `GET /api/deliveries`, refreshed after each inject or on demand — and a **Rules** tab that lists users with their rules, deletes rules and creates new ones with the channels offered by `GET /api/channels`.
 Rule management (M7): `GET /api/channels` returns `ChannelRegistry.ids()`; `GET /api/users` returns each user with `rules` ordered by `createdAt, id` (two queries, D23).
 `POST /api/rules` validates the rule DTO, trims keywords and drops empty ones, returns 400 listing unregistered channel ids and 404 for an unknown user; `DELETE /api/rules/:id` returns 204 or 404.
 
